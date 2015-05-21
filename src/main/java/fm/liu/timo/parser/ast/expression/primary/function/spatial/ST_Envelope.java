@@ -8,19 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class ST_Envelope extends FunctionExpression {
 
-	public ST_Envelope(Expression expr) {
-		super("ST_ENVELOP", wrapList(expr));
-	}
+    public ST_Envelope(Expression expr) {
+        super("ST_ENVELOP", wrapList(expr));
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		throw new UnsupportedOperationException(
-				"function of char has special arguments");
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        throw new UnsupportedOperationException("function of char has special arguments");
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

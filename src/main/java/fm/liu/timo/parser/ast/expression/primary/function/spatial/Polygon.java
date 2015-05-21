@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class Polygon extends FunctionExpression {
 
-	public Polygon(List<Expression> arguments) {
-		super("POLYGON", arguments);
-	}
+    public Polygon(List<Expression> arguments) {
+        super("POLYGON", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new Polygon(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new Polygon(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

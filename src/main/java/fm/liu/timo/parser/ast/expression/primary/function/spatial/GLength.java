@@ -8,19 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class GLength extends FunctionExpression {
 
-	public GLength(Expression expr) {
-		super("GLENGTH", wrapList(expr));
-	}
+    public GLength(Expression expr) {
+        super("GLENGTH", wrapList(expr));
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		throw new UnsupportedOperationException(
-				"function of char has special arguments");
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        throw new UnsupportedOperationException("function of char has special arguments");
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

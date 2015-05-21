@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class ST_Intersects extends FunctionExpression {
 
-	public ST_Intersects(List<Expression> arguments) {
-		super("ST_INTERSECTS", arguments);
-	}
+    public ST_Intersects(List<Expression> arguments) {
+        super("ST_INTERSECTS", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new ST_Intersects(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new ST_Intersects(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

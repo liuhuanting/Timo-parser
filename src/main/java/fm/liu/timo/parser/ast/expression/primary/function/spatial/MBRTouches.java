@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MBRTouches extends FunctionExpression {
 
-	public MBRTouches(List<Expression> arguments) {
-		super("MBRTOUCHES", arguments);
-	}
+    public MBRTouches(List<Expression> arguments) {
+        super("MBRTOUCHES", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new MBRTouches(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new MBRTouches(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

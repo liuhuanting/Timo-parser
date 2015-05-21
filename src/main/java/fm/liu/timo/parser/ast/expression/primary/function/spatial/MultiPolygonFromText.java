@@ -8,19 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MultiPolygonFromText extends FunctionExpression {
 
-	public MultiPolygonFromText(Expression expr) {
-		super("MULTIPOLYGONFROMTEXT", wrapList(expr));
-	}
+    public MultiPolygonFromText(Expression expr) {
+        super("MULTIPOLYGONFROMTEXT", wrapList(expr));
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		throw new UnsupportedOperationException(
-				"function of char has special arguments");
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        throw new UnsupportedOperationException("function of char has special arguments");
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

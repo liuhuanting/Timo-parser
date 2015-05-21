@@ -8,19 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class LineFromText extends FunctionExpression {
 
-	public LineFromText(Expression expr) {
-		super("LINEFROMTEXT", wrapList(expr));
-	}
+    public LineFromText(Expression expr) {
+        super("LINEFROMTEXT", wrapList(expr));
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		throw new UnsupportedOperationException(
-				"function of char has special arguments");
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        throw new UnsupportedOperationException("function of char has special arguments");
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

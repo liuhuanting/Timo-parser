@@ -8,19 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class GeometryCollectionFromWKB extends FunctionExpression {
 
-	public GeometryCollectionFromWKB(Expression expr) {
-		super("GEOMETRYCOLLECTIONFROMWKB", wrapList(expr));
-	}
+    public GeometryCollectionFromWKB(Expression expr) {
+        super("GEOMETRYCOLLECTIONFROMWKB", wrapList(expr));
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		throw new UnsupportedOperationException(
-				"function of char has special arguments");
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        throw new UnsupportedOperationException("function of char has special arguments");
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

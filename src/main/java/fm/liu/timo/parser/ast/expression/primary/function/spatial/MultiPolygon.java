@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MultiPolygon extends FunctionExpression {
 
-	public MultiPolygon(List<Expression> arguments) {
-		super("MULTIPOLYGON", arguments);
-	}
+    public MultiPolygon(List<Expression> arguments) {
+        super("MULTIPOLYGON", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new MultiPolygon(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new MultiPolygon(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

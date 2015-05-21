@@ -8,18 +8,17 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class GeometryFromText extends FunctionExpression {
 
-	public GeometryFromText(Expression expr) {
-		super("GEOMETRYFROMTEXT", wrapList(expr));
-	}
+    public GeometryFromText(Expression expr) {
+        super("GEOMETRYFROMTEXT", wrapList(expr));
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		throw new UnsupportedOperationException(
-				"function of char has special arguments");
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        throw new UnsupportedOperationException("function of char has special arguments");
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }

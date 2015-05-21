@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class ST_Equals extends FunctionExpression {
 
-	public ST_Equals(List<Expression> arguments) {
-		super("ST_EQUALS", arguments);
-	}
+    public ST_Equals(List<Expression> arguments) {
+        super("ST_EQUALS", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new ST_Equals(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new ST_Equals(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

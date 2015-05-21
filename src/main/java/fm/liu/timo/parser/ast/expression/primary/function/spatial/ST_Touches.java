@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class ST_Touches extends FunctionExpression {
 
-	public ST_Touches(List<Expression> arguments) {
-		super("ST_TOUCHES", arguments);
-	}
+    public ST_Touches(List<Expression> arguments) {
+        super("ST_TOUCHES", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new ST_Touches(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new ST_Touches(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

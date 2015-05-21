@@ -7,13 +7,13 @@ import fm.liu.timo.parser.ast.expression.primary.function.FunctionExpression;
 
 public class CurTimestamp extends FunctionExpression {
 
-	public CurTimestamp() {
-		super("CURTIMTSTAMP", null);
-	}
+    public CurTimestamp() {
+        super("CURTIMTSTAMP", null);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new CurTimestamp();
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new CurTimestamp();
+    }
 
 }

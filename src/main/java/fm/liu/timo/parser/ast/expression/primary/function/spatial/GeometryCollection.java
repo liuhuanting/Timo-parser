@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class GeometryCollection extends FunctionExpression {
 
-	public GeometryCollection(List<Expression> arguments) {
-		super("GEOMETRYCOLLECTION", arguments);
-	}
+    public GeometryCollection(List<Expression> arguments) {
+        super("GEOMETRYCOLLECTION", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new GeometryCollection(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new GeometryCollection(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

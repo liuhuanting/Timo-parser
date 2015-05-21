@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MBRWithin extends FunctionExpression {
 
-	public MBRWithin(List<Expression> arguments) {
-		super("MBRWITHIN", arguments);
-	}
+    public MBRWithin(List<Expression> arguments) {
+        super("MBRWITHIN", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new MBRWithin(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new MBRWithin(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

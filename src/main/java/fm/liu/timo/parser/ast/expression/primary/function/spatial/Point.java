@@ -8,17 +8,17 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class Point extends FunctionExpression {
 
-	public Point(List<Expression> arguments) {
-		super("POINT", arguments);
-	}
+    public Point(List<Expression> arguments) {
+        super("POINT", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new Point(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new Point(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }

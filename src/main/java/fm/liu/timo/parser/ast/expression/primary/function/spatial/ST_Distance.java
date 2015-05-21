@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class ST_Distance extends FunctionExpression {
 
-	public ST_Distance(List<Expression> arguments) {
-		super("ST_DISTANCE", arguments);
-	}
+    public ST_Distance(List<Expression> arguments) {
+        super("ST_DISTANCE", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new ST_Distance(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new ST_Distance(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

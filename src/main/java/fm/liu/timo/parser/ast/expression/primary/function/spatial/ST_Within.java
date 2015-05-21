@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class ST_Within extends FunctionExpression {
 
-	public ST_Within(List<Expression> arguments) {
-		super("ST_WITHIN", arguments);
-	}
+    public ST_Within(List<Expression> arguments) {
+        super("ST_WITHIN", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new ST_Within(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new ST_Within(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

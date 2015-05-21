@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class InteriorRingN extends FunctionExpression {
 
-	public InteriorRingN(List<Expression> arguments) {
-		super("INTERIORRINGN", arguments);
-	}
+    public InteriorRingN(List<Expression> arguments) {
+        super("INTERIORRINGN", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new InteriorRingN(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new InteriorRingN(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

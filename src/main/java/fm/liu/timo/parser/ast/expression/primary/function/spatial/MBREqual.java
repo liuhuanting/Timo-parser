@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MBREqual extends FunctionExpression {
 
-	public MBREqual(List<Expression> arguments) {
-		super("MBREQUAL", arguments);
-	}
+    public MBREqual(List<Expression> arguments) {
+        super("MBREQUAL", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new MBREqual(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new MBREqual(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

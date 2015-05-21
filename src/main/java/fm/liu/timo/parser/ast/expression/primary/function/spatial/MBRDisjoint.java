@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MBRDisjoint extends FunctionExpression {
 
-	public MBRDisjoint(List<Expression> arguments) {
-		super("MBRDISJOINT", arguments);
-	}
+    public MBRDisjoint(List<Expression> arguments) {
+        super("MBRDISJOINT", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new MBRDisjoint(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new MBRDisjoint(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }

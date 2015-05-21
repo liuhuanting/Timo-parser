@@ -8,18 +8,18 @@ import fm.liu.timo.parser.visitor.Visitor;
 
 public class MultiPoint extends FunctionExpression {
 
-	public MultiPoint(List<Expression> arguments) {
-		super("MULTIPOINT", arguments);
-	}
+    public MultiPoint(List<Expression> arguments) {
+        super("MULTIPOINT", arguments);
+    }
 
-	@Override
-	public FunctionExpression constructFunction(List<Expression> arguments) {
-		return new MultiPoint(arguments);
-	}
+    @Override
+    public FunctionExpression constructFunction(List<Expression> arguments) {
+        return new MultiPoint(arguments);
+    }
 
-	@Override
-	public void accept(Visitor visitor) {
-		visitor.visit(this);
-	}
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
 }
