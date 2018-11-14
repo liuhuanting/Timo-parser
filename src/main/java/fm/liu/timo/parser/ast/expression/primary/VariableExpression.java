@@ -20,4 +20,5 @@ package fm.liu.timo.parser.ast.expression.primary;
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public abstract class VariableExpression extends PrimaryExpression {
+
 }

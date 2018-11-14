@@ -16,19 +16,48 @@
  */
 package fm.liu.timo.parser.recognizer.mysql.syntax;
 
+import java.sql.SQLSyntaxErrorException;
+
 import org.junit.Assert;
 
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTableStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLTruncateStatement;
+import fm.liu.timo.parser.recognizer.SQLParserDelegate;
 import fm.liu.timo.parser.recognizer.mysql.MySQLToken;
 import fm.liu.timo.parser.recognizer.mysql.lexer.MySQLLexer;
-import fm.liu.timo.parser.recognizer.mysql.syntax.MySQLDDLParser;
-import fm.liu.timo.parser.recognizer.mysql.syntax.MySQLExprParser;
+import fm.liu.timo.parser.visitor.OutputVisitor;
 
 /**
  * @author <a href="mailto:danping.yudp@alibaba-inc.com">YU Danping</a>
  */
 public class MySQLDDLParserTest extends AbstractSyntaxTest {
+
+    public void testCreate() throws SQLSyntaxErrorException {
+        String sql =
+                "CREATE TABLE `stock` (\n" + "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n"
+                        + "  `productid` bigint(20) unsigned NOT NULL,\n"
+                        + "  `storeid` bigint(20) unsigned NOT NULL,\n"
+                        + "  `quantity` int(10) unsigned NOT NULL DEFAULT '1',\n"
+                        + "  PRIMARY KEY (`productid`,`storeid`),\n" + "  KEY `id` (`id`)\n"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        DDLCreateTableStatement stmt = (DDLCreateTableStatement) SQLParserDelegate.parse(sql);
+        OutputVisitor visitor = new OutputVisitor(new StringBuilder());
+        stmt.accept(visitor);
+        System.out.println(visitor.getSql());
+        sql = "CREATE TABLE IF NOT EXISTS `schema`.`Employee` (\n"
+                + "`idEmployee` VARCHAR(45) NOT NULL ,\n" + "`Name` VARCHAR(255) NULL ,\n"
+                + "`idAddresses` VARCHAR(45) NULL ,\n" + "PRIMARY KEY (`idEmployee`) ,\n"
+                + "CONSTRAINT `fkEmployee_Addresses`\n"
+                + "FOREIGN KEY `fkEmployee_Addresses` (`idAddresses`)\n"
+                + "REFERENCES `schema`.`Addresses` (`idAddresses`)\n" + "ON DELETE NO ACTION\n"
+                + "ON UPDATE NO ACTION)\n" + "ENGINE = InnoDB\n" + "DEFAULT CHARACTER SET = utf8\n"
+                + "COLLATE = utf8_bin";
+        stmt = (DDLCreateTableStatement) SQLParserDelegate.parse(sql);
+        visitor = new OutputVisitor(new StringBuilder());
+        stmt.accept(visitor);
+        System.out.println(visitor.getSql());
+    }
 
     public void testTruncate() throws Exception {
         String sql = "Truncate table tb1";
@@ -59,17 +88,17 @@ public class MySQLDDLParserTest extends AbstractSyntaxTest {
         parser = new MySQLDDLParser(lexer, new MySQLExprParser(lexer));
         dst = parser.ddlStmt();
 
-        sql = "crEate temporary tabLe if not exists tb_name";
+        sql = "crEate temporary tabLe if not exists tb_name(id int)";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDDLParser(lexer, new MySQLExprParser(lexer));
         dst = parser.ddlStmt();
 
-        sql = "crEate tabLe if not exists tb_name";
+        sql = "crEate tabLe if not exists tb_name(id serial)";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDDLParser(lexer, new MySQLExprParser(lexer));
         dst = parser.ddlStmt();
 
-        sql = "crEate temporary tabLe tb_name";
+        sql = "crEate temporary tabLe tb_name(id varchar(200))";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDDLParser(lexer, new MySQLExprParser(lexer));
         dst = parser.ddlStmt();

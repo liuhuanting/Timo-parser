@@ -18,6 +18,8 @@ package fm.liu.timo.parser.ast.expression.primary;
 
 import java.util.Map;
 
+import fm.liu.timo.parser.ast.expression.misc.QueryExpression;
+import fm.liu.timo.parser.ast.fragment.tableref.TableReference;
 import fm.liu.timo.parser.visitor.Visitor;
 
 /**
@@ -25,14 +27,24 @@ import fm.liu.timo.parser.visitor.Visitor;
  * 
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
-public class ParamMarker extends PrimaryExpression {
+public class ParamMarker extends PrimaryExpression implements TableReference, QueryExpression {
     private final int paramIndex;
+    private String alias;
 
     /**
      * @param paramIndex start from 1
      */
     public ParamMarker(int paramIndex) {
         this.paramIndex = paramIndex;
+    }
+
+    public ParamMarker(int paramIndex, String alias) {
+        this.paramIndex = paramIndex;
+        this.alias = alias;
+    }
+
+    public String getAlias() {
+        return alias;
     }
 
     /**
@@ -67,4 +79,15 @@ public class ParamMarker extends PrimaryExpression {
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
+    @Override
+    public Object removeLastConditionElement() {
+        return null;
+    }
+
+    @Override
+    public boolean isSingleTable() {
+        return false;
+    }
+
 }

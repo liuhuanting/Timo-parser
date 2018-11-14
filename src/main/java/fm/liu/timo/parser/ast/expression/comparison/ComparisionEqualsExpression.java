@@ -31,8 +31,8 @@ import fm.liu.timo.parser.visitor.Visitor;
  * 
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
-public class ComparisionEqualsExpression extends BinaryOperatorExpression implements
-        ReplacableExpression {
+public class ComparisionEqualsExpression extends BinaryOperatorExpression
+        implements ReplacableExpression {
 
     public ComparisionEqualsExpression(Expression leftOprand, Expression rightOprand) {
         super(leftOprand, rightOprand, PRECEDENCE_COMPARISION);

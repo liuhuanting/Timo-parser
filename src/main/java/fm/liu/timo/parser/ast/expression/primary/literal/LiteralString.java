@@ -27,19 +27,19 @@ import fm.liu.timo.parser.visitor.Visitor;
  */
 public class LiteralString extends Literal {
     private final String introducer;
-    private final String string;
+    private final byte[] data;
     private final boolean nchars;
 
     /**
      * @param string content of string, excluded of head and tail "'". e.g. for string token of
      *        "'don\\'t'", argument of string is "don\\'t"
      */
-    public LiteralString(String introducer, String string, boolean nchars) {
+    public LiteralString(String introducer, byte[] data, boolean nchars) {
         super();
         this.introducer = introducer;
-        if (string == null)
+        if (data == null)
             throw new IllegalArgumentException("argument string is null!");
-        this.string = string;
+        this.data = data;
         this.nchars = nchars;
     }
 
@@ -47,8 +47,8 @@ public class LiteralString extends Literal {
         return introducer;
     }
 
-    public String getString() {
-        return string;
+    public byte[] getBytes() {
+        return data;
     }
 
     public boolean isNchars() {
@@ -56,24 +56,23 @@ public class LiteralString extends Literal {
     }
 
     public String getUnescapedString() {
-        return getUnescapedString(string, false);
+        return getUnescapedString(data, false);
     }
 
     public String getUnescapedString(boolean toUppercase) {
-        return getUnescapedString(string, toUppercase);
+        return getUnescapedString(data, toUppercase);
     }
 
-    public static String getUnescapedString(String string) {
+    public static String getUnescapedString(byte[] string) {
         return getUnescapedString(string, false);
     }
 
-    public static String getUnescapedString(String string, boolean toUppercase) {
+    public static String getUnescapedString(byte[] string, boolean toUppercase) {
         StringBuilder sb = new StringBuilder();
-        char[] chars = string.toCharArray();
-        for (int i = 0; i < chars.length; ++i) {
-            char c = chars[i];
+        for (int i = 0; i < string.length; ++i) {
+            byte c = string[i];
             if (c == '\\') {
-                switch (c = chars[++i]) {
+                switch (c = string[++i]) {
                     case '0':
                         sb.append('\0');
                         break;
@@ -101,7 +100,7 @@ public class LiteralString extends Literal {
             } else {
                 if (toUppercase && c >= 'a' && c <= 'z')
                     c -= 32;
-                sb.append(c);
+                sb.append((char) c);
             }
         }
         return sb.toString();
@@ -109,7 +108,7 @@ public class LiteralString extends Literal {
 
     @Override
     public Object evaluationInternal(Map<? extends Object, ? extends Object> parameters) {
-        if (string == null)
+        if (data == null)
             return null;
         return getUnescapedString();
     }

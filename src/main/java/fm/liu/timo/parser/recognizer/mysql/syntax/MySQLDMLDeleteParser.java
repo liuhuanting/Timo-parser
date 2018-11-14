@@ -123,7 +123,8 @@ public class MySQLDMLDeleteParser extends MySQLDMLParser {
             if (lexer.token() == KW_LIMIT) {
                 limit = limit();
             }
-            return new DMLDeleteStatement(lowPriority, quick, ignore, id, tempWhere, orderBy, limit);
+            return new DMLDeleteStatement(lowPriority, quick, ignore, id, tempWhere, orderBy,
+                    limit);
         }
 
         tempList = idList();
@@ -132,7 +133,8 @@ public class MySQLDMLDeleteParser extends MySQLDMLParser {
         if (lexer.token() == KW_WHERE) {
             lexer.nextToken();
             tempWhere = exprParser.expression();
-            return new DMLDeleteStatement(lowPriority, quick, ignore, tempList, tempRefs, tempWhere);
+            return new DMLDeleteStatement(lowPriority, quick, ignore, tempList, tempRefs,
+                    tempWhere);
         }
         return new DMLDeleteStatement(lowPriority, quick, ignore, tempList, tempRefs);
     }

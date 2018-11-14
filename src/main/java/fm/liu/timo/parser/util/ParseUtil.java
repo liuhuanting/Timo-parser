@@ -165,7 +165,8 @@ public final class ParseUtil {
                 return parseIdentifierEscape(stmt, aliasIndex);
             default:
                 int offset = aliasIndex;
-                for (; offset < stmt.length() && CharTypes.isIdentifierChar(stmt.charAt(offset)); ++offset);
+                for (; offset < stmt.length()
+                        && CharTypes.isIdentifierChar(stmt.charAt(offset)); ++offset);
                 return stmt.substring(aliasIndex, offset);
         }
     }

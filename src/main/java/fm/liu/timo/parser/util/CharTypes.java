@@ -37,7 +37,15 @@ public class CharTypes {
         return c < 256 && hexFlags[c];
     }
 
+    public static boolean isHex(byte c) {
+        return c < 256 && hexFlags[c];
+    }
+
     public static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    public static boolean isDigit(byte c) {
         return c >= '0' && c <= '9';
     }
 
@@ -52,13 +60,16 @@ public class CharTypes {
                 identifierFlags[c] = true;
             }
         }
-        // identifierFlags['`'] = true;
         identifierFlags['_'] = true;
         identifierFlags['$'] = true;
     }
 
     public static boolean isIdentifierChar(char c) {
         return c > identifierFlags.length || identifierFlags[c];
+    }
+
+    public static boolean isIdentifierChar(byte c) {
+        return c < 0 || c > identifierFlags.length || identifierFlags[c];
     }
 
     private final static boolean[] whitespaceFlags = new boolean[256];
@@ -76,6 +87,10 @@ public class CharTypes {
      */
     public static boolean isWhitespace(char c) {
         return c <= whitespaceFlags.length && whitespaceFlags[c];
+    }
+
+    public static boolean isWhitespace(byte b) {
+        return b > 0 && b <= whitespaceFlags.length && whitespaceFlags[b];
     }
 
 }

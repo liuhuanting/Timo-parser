@@ -23,8 +23,21 @@ import fm.liu.timo.parser.visitor.Visitor;
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public class DDLDropIndexStatement implements DDLStatement {
+
+    /** | ALGORITHM [=] {DEFAULT|INPLACE|COPY} @author ZC.CUI */
+    public enum Algorithm {
+        DEFAULT, INPLACE, COPY
+    }
+
+    /** | LOCK [=] {DEFAULT|NONE|SHARED|EXCLUSIVE} @author ZC.CUI*/
+    public enum Lock {
+        DEFAULT, NONE, SHARED, EXCLUSIVE
+    }
+
     private final Identifier indexName;
     private final Identifier table;
+    private Algorithm algorithm;
+    private Lock lock;
 
     public DDLDropIndexStatement(Identifier indexName, Identifier table) {
         this.indexName = indexName;
@@ -37,6 +50,22 @@ public class DDLDropIndexStatement implements DDLStatement {
 
     public Identifier getTable() {
         return table;
+    }
+
+    public Algorithm getAlgorithm() {
+        return algorithm;
+    }
+
+    public void setAlgorithm(Algorithm algorithm) {
+        this.algorithm = algorithm;
+    }
+
+    public Lock getLock() {
+        return lock;
+    }
+
+    public void setLock(Lock lock) {
+        this.lock = lock;
     }
 
     @Override

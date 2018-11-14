@@ -19,12 +19,14 @@ package fm.liu.timo.parser.ast.stmt.ddl;
 import java.util.ArrayList;
 import java.util.List;
 
+import fm.liu.timo.parser.ast.ASTNode;
 import fm.liu.timo.parser.ast.expression.Expression;
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
 import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition;
 import fm.liu.timo.parser.ast.fragment.ddl.TableOptions;
+import fm.liu.timo.parser.ast.fragment.ddl.index.IndexColumnName;
 import fm.liu.timo.parser.ast.fragment.ddl.index.IndexDefinition;
-import fm.liu.timo.parser.ast.stmt.dml.DMLSelectStatement;
+import fm.liu.timo.parser.ast.stmt.dml.DMLQueryStatement;
 import fm.liu.timo.parser.util.Pair;
 import fm.liu.timo.parser.visitor.Visitor;
 
@@ -47,9 +49,11 @@ public class DDLCreateTableStatement implements DDLStatement {
     private final List<Pair<Identifier, IndexDefinition>> keys;
     private final List<Pair<Identifier, IndexDefinition>> fullTextKeys;
     private final List<Pair<Identifier, IndexDefinition>> spatialKeys;
+    private final List<Pair<Identifier, IndexDefinition>> foreignKeys;
     private final List<Expression> checks;
     private TableOptions tableOptions;
-    private Pair<SelectOption, DMLSelectStatement> select;
+    private Pair<SelectOption, DMLQueryStatement> select;
+    private final List<ForeignKeyDefinition> foreignKeyDefs;
 
     public DDLCreateTableStatement(boolean temporary, boolean ifNotExists, Identifier table) {
         this.table = table;
@@ -60,7 +64,9 @@ public class DDLCreateTableStatement implements DDLStatement {
         this.keys = new ArrayList<Pair<Identifier, IndexDefinition>>(2);
         this.fullTextKeys = new ArrayList<Pair<Identifier, IndexDefinition>>(1);
         this.spatialKeys = new ArrayList<Pair<Identifier, IndexDefinition>>(1);
+        this.foreignKeys = new ArrayList<Pair<Identifier, IndexDefinition>>(1);
         this.checks = new ArrayList<Expression>(1);
+        this.foreignKeyDefs = new ArrayList<>();
     }
 
     public DDLCreateTableStatement setTableOptions(TableOptions tableOptions) {
@@ -98,6 +104,11 @@ public class DDLCreateTableStatement implements DDLStatement {
         return this;
     }
 
+    public DDLCreateTableStatement addForeignIndex(Identifier colname, IndexDefinition def) {
+        foreignKeys.add(new Pair<Identifier, IndexDefinition>(colname, def));
+        return this;
+    }
+
     public DDLCreateTableStatement addCheck(Expression check) {
         checks.add(check);
         return this;
@@ -107,13 +118,13 @@ public class DDLCreateTableStatement implements DDLStatement {
         return tableOptions;
     }
 
-    public Pair<SelectOption, DMLSelectStatement> getSelect() {
+    public Pair<SelectOption, DMLQueryStatement> getSelect() {
         return select;
     }
 
-    public void setSelect(SelectOption option, DMLSelectStatement select) {
+    public void setSelect(SelectOption option, DMLQueryStatement select) {
         this.select =
-                new Pair<DDLCreateTableStatement.SelectOption, DMLSelectStatement>(option, select);
+                new Pair<DDLCreateTableStatement.SelectOption, DMLQueryStatement>(option, select);
     }
 
     public boolean isTemporary() {
@@ -155,12 +166,87 @@ public class DDLCreateTableStatement implements DDLStatement {
         return spatialKeys;
     }
 
+    public List<Pair<Identifier, IndexDefinition>> getForeignKeys() {
+        return foreignKeys;
+    }
+
     public List<Expression> getChecks() {
         return checks;
+    }
+
+    public List<ForeignKeyDefinition> getForeignKeyDefs() {
+        return foreignKeyDefs;
     }
 
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
+    }
+
+    public static class ForeignKeyDefinition implements ASTNode {
+        public enum REFERENCE_OPTION {
+            RESTRICT, CASCADE, SET_NULL, NO_ACTION
+        }
+
+        private final Identifier indexName;
+        private final List<IndexColumnName> columns;
+        private final Identifier referenceTable;
+        private final List<IndexColumnName> referenceColumns;
+        private REFERENCE_OPTION onDelete;
+        private REFERENCE_OPTION onUpdate;
+        private Identifier symbol;
+
+        public ForeignKeyDefinition(Identifier indexName, List<IndexColumnName> columns,
+                Identifier referenceTable, List<IndexColumnName> referenceColumns) {
+            this.indexName = indexName;
+            this.columns = columns;
+            this.referenceTable = referenceTable;
+            this.referenceColumns = referenceColumns;
+        }
+
+        public REFERENCE_OPTION getOnDelete() {
+            return onDelete;
+        }
+
+        public void setOnDelete(REFERENCE_OPTION onDelete) {
+            this.onDelete = onDelete;
+        }
+
+        public REFERENCE_OPTION getOnUpdate() {
+            return onUpdate;
+        }
+
+        public void setOnUpdate(REFERENCE_OPTION onUpdate) {
+            this.onUpdate = onUpdate;
+        }
+
+        public Identifier getSymbol() {
+            return symbol;
+        }
+
+        public void setSymbol(Identifier symbol) {
+            this.symbol = symbol;
+        }
+
+        public Identifier getIndexName() {
+            return indexName;
+        }
+
+        public List<IndexColumnName> getColumns() {
+            return columns;
+        }
+
+        public Identifier getReferenceTable() {
+            return referenceTable;
+        }
+
+        public List<IndexColumnName> getReferenceColumns() {
+            return referenceColumns;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
     }
 }

@@ -59,7 +59,8 @@ public class InnerJoin implements TableReference {
         this(leftTableRef, rightTableRef, onCond, null);
     }
 
-    public InnerJoin(TableReference leftTableRef, TableReference rightTableRef, List<String> using) {
+    public InnerJoin(TableReference leftTableRef, TableReference rightTableRef,
+            List<String> using) {
         this(leftTableRef, rightTableRef, null, using);
     }
 

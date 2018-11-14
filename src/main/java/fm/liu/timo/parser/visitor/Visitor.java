@@ -11,12 +11,15 @@ import fm.liu.timo.parser.ast.expression.comparison.ComparisionEqualsExpression;
 import fm.liu.timo.parser.ast.expression.comparison.ComparisionGreaterThanExpression;
 import fm.liu.timo.parser.ast.expression.comparison.ComparisionGreaterThanOrEqualsExpression;
 import fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression;
+import fm.liu.timo.parser.ast.expression.comparison.ComparisionLessOrGreaterThanExpression;
 import fm.liu.timo.parser.ast.expression.comparison.ComparisionLessThanExpression;
 import fm.liu.timo.parser.ast.expression.comparison.ComparisionLessThanOrEqualsExpression;
+import fm.liu.timo.parser.ast.expression.comparison.ComparisionNotEqualsExpression;
 import fm.liu.timo.parser.ast.expression.comparison.ComparisionNullSafeEqualsExpression;
 import fm.liu.timo.parser.ast.expression.comparison.InExpression;
 import fm.liu.timo.parser.ast.expression.logical.LogicalAndExpression;
 import fm.liu.timo.parser.ast.expression.logical.LogicalOrExpression;
+import fm.liu.timo.parser.ast.expression.logical.LogicalXORExpression;
 import fm.liu.timo.parser.ast.expression.misc.InExpressionList;
 import fm.liu.timo.parser.ast.expression.misc.UserExpression;
 import fm.liu.timo.parser.ast.expression.primary.CaseWhenOperatorExpression;
@@ -24,6 +27,8 @@ import fm.liu.timo.parser.ast.expression.primary.DefaultValue;
 import fm.liu.timo.parser.ast.expression.primary.ExistsPrimary;
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
 import fm.liu.timo.parser.ast.expression.primary.MatchExpression;
+import fm.liu.timo.parser.ast.expression.primary.NewRowPrimary;
+import fm.liu.timo.parser.ast.expression.primary.OldRowPrimary;
 import fm.liu.timo.parser.ast.expression.primary.ParamMarker;
 import fm.liu.timo.parser.ast.expression.primary.PlaceHolder;
 import fm.liu.timo.parser.ast.expression.primary.RowExpression;
@@ -36,12 +41,14 @@ import fm.liu.timo.parser.ast.expression.primary.function.datetime.Extract;
 import fm.liu.timo.parser.ast.expression.primary.function.datetime.GetFormat;
 import fm.liu.timo.parser.ast.expression.primary.function.datetime.Timestampadd;
 import fm.liu.timo.parser.ast.expression.primary.function.datetime.Timestampdiff;
+import fm.liu.timo.parser.ast.expression.primary.function.flowctrl.Ifnull;
 import fm.liu.timo.parser.ast.expression.primary.function.groupby.Avg;
 import fm.liu.timo.parser.ast.expression.primary.function.groupby.Count;
 import fm.liu.timo.parser.ast.expression.primary.function.groupby.GroupConcat;
 import fm.liu.timo.parser.ast.expression.primary.function.groupby.Max;
 import fm.liu.timo.parser.ast.expression.primary.function.groupby.Min;
 import fm.liu.timo.parser.ast.expression.primary.function.groupby.Sum;
+import fm.liu.timo.parser.ast.expression.primary.function.info.LastInsertId;
 import fm.liu.timo.parser.ast.expression.primary.function.string.Char;
 import fm.liu.timo.parser.ast.expression.primary.function.string.Trim;
 import fm.liu.timo.parser.ast.expression.primary.literal.IntervalPrimary;
@@ -60,6 +67,7 @@ import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition;
 import fm.liu.timo.parser.ast.fragment.ddl.TableOptions;
 import fm.liu.timo.parser.ast.fragment.ddl.datatype.DataType;
 import fm.liu.timo.parser.ast.fragment.ddl.index.IndexColumnName;
+import fm.liu.timo.parser.ast.fragment.ddl.index.IndexDefinition;
 import fm.liu.timo.parser.ast.fragment.ddl.index.IndexOption;
 import fm.liu.timo.parser.ast.fragment.tableref.Dual;
 import fm.liu.timo.parser.ast.fragment.tableref.IndexHint;
@@ -70,6 +78,25 @@ import fm.liu.timo.parser.ast.fragment.tableref.StraightJoin;
 import fm.liu.timo.parser.ast.fragment.tableref.SubqueryFactor;
 import fm.liu.timo.parser.ast.fragment.tableref.TableRefFactor;
 import fm.liu.timo.parser.ast.fragment.tableref.TableReferences;
+import fm.liu.timo.parser.ast.stmt.compound.BeginEndStatement;
+import fm.liu.timo.parser.ast.stmt.compound.DeclareStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.DeclareConditionStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.DeclareHandlerStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.GetDiagnosticsStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.ResignalStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.SignalStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorCloseStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorDeclareStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorFetchStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorOpenStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.CaseStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.IfStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.IterateStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.LeaveStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.LoopStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.RepeatStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.ReturnStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.WhileStatement;
 import fm.liu.timo.parser.ast.stmt.dal.DALSetCharacterSetStatement;
 import fm.liu.timo.parser.ast.stmt.dal.DALSetNamesStatement;
 import fm.liu.timo.parser.ast.stmt.dal.DALSetStatement;
@@ -77,15 +104,18 @@ import fm.liu.timo.parser.ast.stmt.dal.ShowAuthors;
 import fm.liu.timo.parser.ast.stmt.dal.ShowBinLogEvent;
 import fm.liu.timo.parser.ast.stmt.dal.ShowBinaryLog;
 import fm.liu.timo.parser.ast.stmt.dal.ShowCharaterSet;
+import fm.liu.timo.parser.ast.stmt.dal.ShowCharset;
 import fm.liu.timo.parser.ast.stmt.dal.ShowCollation;
 import fm.liu.timo.parser.ast.stmt.dal.ShowColumns;
 import fm.liu.timo.parser.ast.stmt.dal.ShowContributors;
 import fm.liu.timo.parser.ast.stmt.dal.ShowCreate;
+import fm.liu.timo.parser.ast.stmt.dal.ShowCreateDatabase;
 import fm.liu.timo.parser.ast.stmt.dal.ShowDatabases;
 import fm.liu.timo.parser.ast.stmt.dal.ShowEngine;
 import fm.liu.timo.parser.ast.stmt.dal.ShowEngines;
 import fm.liu.timo.parser.ast.stmt.dal.ShowErrors;
 import fm.liu.timo.parser.ast.stmt.dal.ShowEvents;
+import fm.liu.timo.parser.ast.stmt.dal.ShowFields;
 import fm.liu.timo.parser.ast.stmt.dal.ShowFunctionCode;
 import fm.liu.timo.parser.ast.stmt.dal.ShowFunctionStatus;
 import fm.liu.timo.parser.ast.stmt.dal.ShowGrants;
@@ -107,15 +137,27 @@ import fm.liu.timo.parser.ast.stmt.dal.ShowTables;
 import fm.liu.timo.parser.ast.stmt.dal.ShowTriggers;
 import fm.liu.timo.parser.ast.stmt.dal.ShowVariables;
 import fm.liu.timo.parser.ast.stmt.dal.ShowWarnings;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterEventStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement.AlterSpecification;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement.WithValidation;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterViewStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateEventStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateFunctionStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateIndexStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateLikeStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateProcedureStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTableStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTableStatement.ForeignKeyDefinition;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTriggerStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateViewStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLDropIndexStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLDropTableStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLDropTriggerStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLRenameTableStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLTruncateStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DescTableStatement;
-import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement.AlterSpecification;
+import fm.liu.timo.parser.ast.stmt.ddl.ExplainStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLCallStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLDeleteStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLInsertStatement;
@@ -125,18 +167,23 @@ import fm.liu.timo.parser.ast.stmt.dml.DMLSelectUnionStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLUpdateStatement;
 import fm.liu.timo.parser.ast.stmt.extension.ExtDDLCreatePolicy;
 import fm.liu.timo.parser.ast.stmt.extension.ExtDDLDropPolicy;
+import fm.liu.timo.parser.ast.stmt.mts.MTSCommitStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSReleaseStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSRollbackStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSSavepointStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSSetTransactionStatement;
+import fm.liu.timo.parser.ast.stmt.mts.MTSStartTransactionStatement;
 import fm.liu.timo.parser.util.Pair;
 
 public abstract class Visitor {
+
+    protected int stackDeep = 0;
 
     @SuppressWarnings({"rawtypes"})
     protected void visitChild(Object obj) {
         if (obj == null)
             return;
+        stackDeep++;
         if (obj instanceof ASTNode) {
             ((ASTNode) obj).accept(this);
         } else if (obj instanceof Collection) {
@@ -147,6 +194,7 @@ public abstract class Visitor {
             visitChild(((Pair) obj).getKey());
             visitChild(((Pair) obj).getValue());
         }
+        stackDeep--;
     }
 
     public void visit(BetweenAndExpression node) {
@@ -171,6 +219,11 @@ public abstract class Visitor {
 
     public void visit(CollateExpression node) {
         visitChild(node.getString());
+    }
+
+    public void visit(LogicalXORExpression node) {
+        visitChild(node.getLeftOprand());
+        visitChild(node.getRightOprand());
     }
 
     public void visit(UserExpression node) {}
@@ -199,6 +252,14 @@ public abstract class Visitor {
     }
 
     public void visit(ComparisionEqualsExpression node) {
+        visit((BinaryOperatorExpression) node);
+    }
+
+    public void visit(ComparisionNotEqualsExpression node) {
+        visit((BinaryOperatorExpression) node);
+    }
+
+    public void visit(ComparisionLessOrGreaterThanExpression node) {
         visit((BinaryOperatorExpression) node);
     }
 
@@ -231,6 +292,10 @@ public abstract class Visitor {
     }
 
     public void visit(FunctionExpression node) {
+        visitChild(node.getArguments());
+    }
+
+    public void visit(LastInsertId node) {
         visitChild(node.getArguments());
     }
 
@@ -277,17 +342,27 @@ public abstract class Visitor {
 
     public void visit(GroupConcat node) {
         visit((FunctionExpression) node);
-        visitChild(node.getAppendedColumnNames());
-        visitChild(node.getOrderBy());
     }
 
-    public void visit(Timestampdiff node) {}
+    public void visit(Timestampdiff node) {
+        visit((FunctionExpression) node);
+    }
 
-    public void visit(Timestampadd node) {}
+    public void visit(Timestampadd node) {
+        visit((FunctionExpression) node);
+    }
 
-    public void visit(Extract node) {}
+    public void visit(Extract node) {
+        visit((FunctionExpression) node);
+    }
 
-    public void visit(GetFormat node) {}
+    public void visit(GetFormat node) {
+        visit((FunctionExpression) node);
+    }
+
+    public void visit(Ifnull node) {
+        visit((FunctionExpression) node);
+    }
 
     public void visit(IntervalPrimary node) {
         visitChild(node.getQuantity());
@@ -372,6 +447,7 @@ public abstract class Visitor {
     public void visit(TableRefFactor node) {
         visitChild(node.getHintList());
         visitChild(node.getTable());
+        visitChild(node.getParamMarker());
     }
 
     public void visit(Dual dual) {}
@@ -414,6 +490,10 @@ public abstract class Visitor {
         visitChild(node.getWhere());
     }
 
+    public void visit(ShowCharset node) {
+        visitChild(node.getWhere());
+    }
+
     public void visit(ShowCollation node) {
         visitChild(node.getWhere());
     }
@@ -421,6 +501,7 @@ public abstract class Visitor {
     public void visit(ShowColumns node) {
         visitChild(node.getTable());
         visitChild(node.getWhere());
+        visitChild(node.getPattern());
     }
 
     public void visit(ShowContributors node) {}
@@ -566,6 +647,7 @@ public abstract class Visitor {
         visitChild(node.getHaving());
         visitChild(node.getLimit());
         visitChild(node.getOrder());
+        stackDeep = 0;
         visitChild(node.getSelectExprList());
         visitChild(node.getTables());
         visitChild(node.getWhere());
@@ -574,6 +656,7 @@ public abstract class Visitor {
     public void visit(DMLSelectUnionStatement node) {
         visitChild(node.getLimit());
         visitChild(node.getOrderBy());
+        stackDeep = 0;
         visitChild(node.getSelectStmtList());
     }
 
@@ -599,6 +682,8 @@ public abstract class Visitor {
         visitChild(node.getSavepoint());
     }
 
+    public void visit(MTSCommitStatement node) {}
+
     public void visit(DDLTruncateStatement node) {
         visitChild(node.getTable());
     }
@@ -608,11 +693,19 @@ public abstract class Visitor {
     }
 
     public void visit(DDLCreateIndexStatement node) {
-        visitChild(node.getIndexName());
+        visitChild(node.getIndexDefinition());
         visitChild(node.getTable());
     }
 
     public void visit(DDLCreateTableStatement node) {
+        visitChild(node.getTable());
+    }
+
+    /**
+     *
+     * @param node | CREATE TABLE tbl_name { LIKE old_tbl_name | (LIKE old_tbl_name) }
+     */
+    public void visit(DDLCreateLikeStatement node) {
         visitChild(node.getTable());
     }
 
@@ -632,5 +725,161 @@ public abstract class Visitor {
     public void visit(ExtDDLCreatePolicy node) {}
 
     public void visit(ExtDDLDropPolicy node) {}
+
+    public void visit(ShowFields node) {
+        visitChild(node.getTable());
+        visitChild(node.getPattern());
+        visitChild(node.getWhere());
+    }
+
+    public void visit(DDLAlterViewStatement node) {}
+
+    public void visit(DDLAlterEventStatement node) {}
+
+    public void visit(DDLCreateEventStatement node) {}
+
+    public void visit(DDLCreateTriggerStatement node) {
+        visitChild(node.getDefiner());
+        visitChild(node.getTriggerName());
+        visitChild(node.getTriggerTime());
+        visitChild(node.getTriggerEvent());
+        visitChild(node.getTable());
+        visitChild(node.getTriggerOrder());
+        visitChild(node.getOtherTriggerName());
+        visitChild(node.getStmt());
+    }
+
+    public void visit(DDLCreateViewStatement node) {}
+
+    public void visit(MTSStartTransactionStatement mtsStartTransactionStatement) {};
+
+    public void visit(ShowCreateDatabase node) {
+        visitChild(node.getDbName());
+    }
+
+    public void visit(ExplainStatement node) {
+        visitChild(node.getTblName());
+        visitChild(node.getExplainableStmt());
+    }
+
+    public void visit(ForeignKeyDefinition foreignKeyDefinition) {}
+
+    public void visit(WithValidation withValidation) {}
+
+    public void visit(IfStatement node) {
+        visitChild(node.getIfStatements());
+        visitChild(node.getElseStatement());
+    }
+
+    public void visit(BeginEndStatement node) {
+        visitChild(node.getLabel());
+        visitChild(node.getStatements());
+    }
+
+    public void visit(NewRowPrimary node) {}
+
+    public void visit(OldRowPrimary node) {}
+
+    public void visit(LoopStatement node) {
+        visitChild(node.getLabel());
+        visitChild(node.getStmt());
+    }
+
+    public void visit(IterateStatement node) {
+        visitChild(node.getLabel());
+    }
+
+    public void visit(LeaveStatement node) {
+        visitChild(node.getLabel());
+    }
+
+    public void visit(ReturnStatement node) {
+        visitChild(node.getLabel());
+    }
+
+    public void visit(RepeatStatement node) {
+        visitChild(node.getLabel());
+        visitChild(node.getStmt());
+        visitChild(node.getUtilCondition());
+    }
+
+    public void visit(WhileStatement node) {
+        visitChild(node.getLabel());
+        visitChild(node.getStmt());
+        visitChild(node.getWhileCondition());
+    }
+
+    public void visit(CaseStatement node) {
+        visitChild(node.getCaseValue());
+        visitChild(node.getWhenList());
+        visitChild(node.getElseStmt());
+    }
+
+    public void visit(DeclareStatement node) {
+        visitChild(node.getVarNames());
+        visitChild(node.getDataType());
+    }
+
+    public void visit(DeclareHandlerStatement node) {
+        visitChild(node.getStmt());
+    }
+
+    public void visit(DeclareConditionStatement node) {
+        visitChild(node.getName());
+    }
+
+    public void visit(CursorDeclareStatement node) {
+        visitChild(node.getName());
+        visitChild(node.getStmt());
+    }
+
+    public void visit(CursorCloseStatement node) {
+        visitChild(node.getName());
+    }
+
+    public void visit(CursorOpenStatement node) {
+        visitChild(node.getName());
+    }
+
+    public void visit(CursorFetchStatement node) {
+        visitChild(node.getName());
+        visitChild(node.getVarNames());
+    }
+
+    public void visit(SignalStatement node) {
+        visitChild(node.getInformationItems());
+    }
+
+    public void visit(ResignalStatement node) {
+        visitChild(node.getInformationItems());
+    }
+
+    public void visit(GetDiagnosticsStatement node) {
+        visitChild(node.getStatementItems());
+        visitChild(node.getConditionItems());
+    }
+
+    public void visit(DDLCreateProcedureStatement node) {
+        visitChild(node.getDefiner());
+        visitChild(node.getName());
+        visitChild(node.getParameters());
+        visitChild(node.getCharacteristics());
+        visitChild(node.getStmt());
+    }
+
+    public void visit(DDLCreateFunctionStatement node) {
+        visitChild(node.getDefiner());
+        visitChild(node.getName());
+        visitChild(node.getParameters());
+        visitChild(node.getReturns());
+        visitChild(node.getCharacteristics());
+        visitChild(node.getStmt());
+    }
+
+    public void visit(DDLDropTriggerStatement node) {
+        visitChild(node.getName());
+    }
+
+    public void visit(IndexDefinition node) {}
 
 }

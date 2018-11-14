@@ -29,7 +29,7 @@ public class LiteralHexadecimal extends Literal {
     private byte[] bytes;
     private final String introducer;
     private final String charset;
-    private final char[] string;
+    private final byte[] string;
     private final int offset;
     private final int size;
 
@@ -39,7 +39,8 @@ public class LiteralHexadecimal extends Literal {
      * @param offset e.g. 9
      * @param size e.g. 4
      */
-    public LiteralHexadecimal(String introducer, char[] string, int offset, int size, String charset) {
+    public LiteralHexadecimal(String introducer, byte[] string, int offset, int size,
+            String charset) {
         super();
         if (string == null || offset + size > string.length)
             throw new IllegalArgumentException("hex text is invalid");
@@ -61,7 +62,7 @@ public class LiteralHexadecimal extends Literal {
     }
 
     public void appendTo(StringBuilder sb) {
-        sb.append(string, offset, size);
+        sb.append(new String(string, offset, size));
     }
 
     @Override

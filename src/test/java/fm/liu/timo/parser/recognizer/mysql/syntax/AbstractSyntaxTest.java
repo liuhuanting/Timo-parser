@@ -13,16 +13,16 @@
  */
 package fm.liu.timo.parser.recognizer.mysql.syntax;
 
-import junit.framework.TestCase;
 import fm.liu.timo.parser.ast.ASTNode;
 import fm.liu.timo.parser.visitor.OutputVisitor;
+import junit.framework.TestCase;
 
 public abstract class AbstractSyntaxTest extends TestCase {
     private static final boolean debug = false;
 
     protected String output2MySQL(ASTNode node, String sql) {
         StringBuilder sb = new StringBuilder(sql.length());
-        node.accept(new OutputVisitor(sb, false));
+        node.accept(new OutputVisitor(sb));
         if (debug) {
             System.out.println(getClass().getName() + "'s testcase: ");
             System.out.println("    " + sql);

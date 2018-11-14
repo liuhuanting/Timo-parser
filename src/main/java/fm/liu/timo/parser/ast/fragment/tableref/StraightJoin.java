@@ -27,7 +27,8 @@ public class StraightJoin implements TableReference {
     private final TableReference rightTableRef;
     private Expression onCond;
 
-    public StraightJoin(TableReference leftTableRef, TableReference rightTableRef, Expression onCond) {
+    public StraightJoin(TableReference leftTableRef, TableReference rightTableRef,
+            Expression onCond) {
         super();
         this.leftTableRef = leftTableRef;
         this.rightTableRef = rightTableRef;

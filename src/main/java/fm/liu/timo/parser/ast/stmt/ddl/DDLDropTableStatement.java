@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
+import fm.liu.timo.parser.visitor.OutputVisitor;
 import fm.liu.timo.parser.visitor.Visitor;
 
 /**
@@ -70,6 +71,13 @@ public class DDLDropTableStatement implements DDLStatement {
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        accept(new OutputVisitor(sb));
+        return sb.toString();
     }
 
 }

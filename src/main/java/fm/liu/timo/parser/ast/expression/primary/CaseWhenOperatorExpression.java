@@ -29,9 +29,9 @@ import fm.liu.timo.parser.visitor.Visitor;
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public class CaseWhenOperatorExpression extends PrimaryExpression {
-    private final Expression comparee;
+    private Expression comparee;
     private final List<Pair<Expression, Expression>> whenList;
-    private final Expression elseResult;
+    private Expression elseResult;
 
     /**
      * @param whenList never null or empry; no pair contains null key or value
@@ -69,4 +69,13 @@ public class CaseWhenOperatorExpression extends PrimaryExpression {
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
+    public void setComparee(Expression exp) {
+        this.comparee = exp;
+    }
+
+    public void setElseResult(Expression exp) {
+        this.elseResult = exp;
+    }
+
 }

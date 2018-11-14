@@ -57,4 +57,6 @@ public interface Expression extends ASTNode {
     Object UNEVALUATABLE = new Object();
 
     Object evaluation(Map<? extends Object, ? extends Object> parameters);
+
+    String originSQLStr();
 }

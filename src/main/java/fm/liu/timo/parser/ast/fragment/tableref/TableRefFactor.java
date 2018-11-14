@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
+import fm.liu.timo.parser.ast.expression.primary.ParamMarker;
 import fm.liu.timo.parser.visitor.Visitor;
 
 /**
@@ -28,8 +29,10 @@ import fm.liu.timo.parser.visitor.Visitor;
  */
 public class TableRefFactor extends AliasableTableReference {
     /** e.g. <code>"`db2`.`tb1`"</code> is possible */
-    private final Identifier table;
+    private Identifier table;
+    private ParamMarker marker;
     private final List<IndexHint> hintList;
+    private List<Identifier> partitions;
 
     public TableRefFactor(Identifier table, String alias, List<IndexHint> hintList) {
         super(alias);
@@ -41,10 +44,35 @@ public class TableRefFactor extends AliasableTableReference {
         } else {
             this.hintList = new ArrayList<IndexHint>(hintList);
         }
+        this.partitions = null;
+    }
+
+    public TableRefFactor(Identifier table, String alias, List<IndexHint> hintList,
+            List<Identifier> partitions) {
+        this(table, alias, hintList);
+        this.partitions = partitions;
     }
 
     public TableRefFactor(Identifier table, List<IndexHint> hintList) {
         this(table, null, hintList);
+    }
+
+    /**
+     * <p>Description: </p>
+     * @param createParam
+     * @param alias
+     * @param hintList2
+     * @param partition : 
+     */
+    public TableRefFactor(ParamMarker paramMarker, String alias, List<IndexHint> hintList,
+            List<Identifier> partitions) {
+        this(null, alias, hintList);
+        this.marker = paramMarker;
+        this.partitions = partitions;
+    }
+
+    public ParamMarker getParamMarker() {
+        return marker;
     }
 
     public Identifier getTable() {
@@ -53,6 +81,10 @@ public class TableRefFactor extends AliasableTableReference {
 
     public List<IndexHint> getHintList() {
         return hintList;
+    }
+
+    public List<Identifier> getPartitions() {
+        return partitions;
     }
 
     @Override

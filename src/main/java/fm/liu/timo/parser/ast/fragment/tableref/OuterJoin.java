@@ -48,8 +48,8 @@ public class OuterJoin implements TableReference {
     private final Expression onCond;
     private final List<String> using;
 
-    private OuterJoin(boolean isLeftJoin, TableReference leftTableRef,
-            TableReference rightTableRef, Expression onCond, List<String> using) {
+    private OuterJoin(boolean isLeftJoin, TableReference leftTableRef, TableReference rightTableRef,
+            Expression onCond, List<String> using) {
         super();
         this.isLeftJoin = isLeftJoin;
         this.leftTableRef = leftTableRef;

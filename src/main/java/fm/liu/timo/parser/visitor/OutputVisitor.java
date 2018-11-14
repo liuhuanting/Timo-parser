@@ -1,7 +1,15 @@
 package fm.liu.timo.parser.visitor;
 
-import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.*;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_FALSE;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_NOT_FALSE;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_NOT_NULL;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_NOT_TRUE;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_NOT_UNKNOWN;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_NULL;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_TRUE;
+import static fm.liu.timo.parser.ast.expression.comparison.ComparisionIsExpression.IS_UNKNOWN;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +30,7 @@ import fm.liu.timo.parser.ast.expression.comparison.ComparisionNullSafeEqualsExp
 import fm.liu.timo.parser.ast.expression.comparison.InExpression;
 import fm.liu.timo.parser.ast.expression.logical.LogicalAndExpression;
 import fm.liu.timo.parser.ast.expression.logical.LogicalOrExpression;
+import fm.liu.timo.parser.ast.expression.logical.LogicalXORExpression;
 import fm.liu.timo.parser.ast.expression.misc.InExpressionList;
 import fm.liu.timo.parser.ast.expression.misc.QueryExpression;
 import fm.liu.timo.parser.ast.expression.misc.UserExpression;
@@ -30,6 +39,8 @@ import fm.liu.timo.parser.ast.expression.primary.DefaultValue;
 import fm.liu.timo.parser.ast.expression.primary.ExistsPrimary;
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
 import fm.liu.timo.parser.ast.expression.primary.MatchExpression;
+import fm.liu.timo.parser.ast.expression.primary.NewRowPrimary;
+import fm.liu.timo.parser.ast.expression.primary.OldRowPrimary;
 import fm.liu.timo.parser.ast.expression.primary.ParamMarker;
 import fm.liu.timo.parser.ast.expression.primary.PlaceHolder;
 import fm.liu.timo.parser.ast.expression.primary.RowExpression;
@@ -52,6 +63,7 @@ import fm.liu.timo.parser.ast.expression.primary.function.groupby.Sum;
 import fm.liu.timo.parser.ast.expression.primary.function.string.Char;
 import fm.liu.timo.parser.ast.expression.primary.function.string.Trim;
 import fm.liu.timo.parser.ast.expression.primary.literal.IntervalPrimary;
+import fm.liu.timo.parser.ast.expression.primary.literal.Literal;
 import fm.liu.timo.parser.ast.expression.primary.literal.LiteralBitField;
 import fm.liu.timo.parser.ast.expression.primary.literal.LiteralBoolean;
 import fm.liu.timo.parser.ast.expression.primary.literal.LiteralHexadecimal;
@@ -66,9 +78,18 @@ import fm.liu.timo.parser.ast.fragment.OrderBy;
 import fm.liu.timo.parser.ast.fragment.SortOrder;
 import fm.liu.timo.parser.ast.fragment.VariableScope;
 import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition;
+import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition.ColumnFormat;
+import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition.SpecialIndex;
+import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition.Storage;
 import fm.liu.timo.parser.ast.fragment.ddl.TableOptions;
+import fm.liu.timo.parser.ast.fragment.ddl.TableOptions.Compression;
+import fm.liu.timo.parser.ast.fragment.ddl.TableOptions.InsertMethod;
+import fm.liu.timo.parser.ast.fragment.ddl.TableOptions.PackKeys;
+import fm.liu.timo.parser.ast.fragment.ddl.TableOptions.RowFormat;
 import fm.liu.timo.parser.ast.fragment.ddl.datatype.DataType;
 import fm.liu.timo.parser.ast.fragment.ddl.index.IndexColumnName;
+import fm.liu.timo.parser.ast.fragment.ddl.index.IndexDefinition;
+import fm.liu.timo.parser.ast.fragment.ddl.index.IndexDefinition.KeyType;
 import fm.liu.timo.parser.ast.fragment.ddl.index.IndexOption;
 import fm.liu.timo.parser.ast.fragment.tableref.Dual;
 import fm.liu.timo.parser.ast.fragment.tableref.IndexHint;
@@ -80,6 +101,32 @@ import fm.liu.timo.parser.ast.fragment.tableref.SubqueryFactor;
 import fm.liu.timo.parser.ast.fragment.tableref.TableRefFactor;
 import fm.liu.timo.parser.ast.fragment.tableref.TableReference;
 import fm.liu.timo.parser.ast.fragment.tableref.TableReferences;
+import fm.liu.timo.parser.ast.stmt.SQLStatement;
+import fm.liu.timo.parser.ast.stmt.compound.BeginEndStatement;
+import fm.liu.timo.parser.ast.stmt.compound.CompoundStatement;
+import fm.liu.timo.parser.ast.stmt.compound.DeclareStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.Characteristics;
+import fm.liu.timo.parser.ast.stmt.compound.condition.Characteristics.Characteristic;
+import fm.liu.timo.parser.ast.stmt.compound.condition.ConditionValue;
+import fm.liu.timo.parser.ast.stmt.compound.condition.DeclareConditionStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.DeclareHandlerStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.GetDiagnosticsStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.GetDiagnosticsStatement.StatementInfoItemName;
+import fm.liu.timo.parser.ast.stmt.compound.condition.ResignalStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.SignalStatement;
+import fm.liu.timo.parser.ast.stmt.compound.condition.SignalStatement.ConditionInfoItemName;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorCloseStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorDeclareStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorFetchStatement;
+import fm.liu.timo.parser.ast.stmt.compound.cursors.CursorOpenStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.CaseStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.IfStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.IterateStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.LeaveStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.LoopStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.RepeatStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.ReturnStatement;
+import fm.liu.timo.parser.ast.stmt.compound.flowcontrol.WhileStatement;
 import fm.liu.timo.parser.ast.stmt.dal.DALSetCharacterSetStatement;
 import fm.liu.timo.parser.ast.stmt.dal.DALSetNamesStatement;
 import fm.liu.timo.parser.ast.stmt.dal.DALSetStatement;
@@ -91,6 +138,7 @@ import fm.liu.timo.parser.ast.stmt.dal.ShowCollation;
 import fm.liu.timo.parser.ast.stmt.dal.ShowColumns;
 import fm.liu.timo.parser.ast.stmt.dal.ShowContributors;
 import fm.liu.timo.parser.ast.stmt.dal.ShowCreate;
+import fm.liu.timo.parser.ast.stmt.dal.ShowCreateDatabase;
 import fm.liu.timo.parser.ast.stmt.dal.ShowDatabases;
 import fm.liu.timo.parser.ast.stmt.dal.ShowEngine;
 import fm.liu.timo.parser.ast.stmt.dal.ShowEngines;
@@ -118,14 +166,23 @@ import fm.liu.timo.parser.ast.stmt.dal.ShowTriggers;
 import fm.liu.timo.parser.ast.stmt.dal.ShowVariables;
 import fm.liu.timo.parser.ast.stmt.dal.ShowWarnings;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement.AlterSpecification;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateFunctionStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateIndexStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateLikeStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateProcedureStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateProcedureStatement.ProcParameterType;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTableStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTableStatement.ForeignKeyDefinition;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTableStatement.ForeignKeyDefinition.REFERENCE_OPTION;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTriggerStatement;
+import fm.liu.timo.parser.ast.stmt.ddl.DDLCreateTriggerStatement.TriggerOrder;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLDropIndexStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLDropTableStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLRenameTableStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DDLTruncateStatement;
 import fm.liu.timo.parser.ast.stmt.ddl.DescTableStatement;
-import fm.liu.timo.parser.ast.stmt.ddl.DDLAlterTableStatement.AlterSpecification;
+import fm.liu.timo.parser.ast.stmt.ddl.ExplainStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLCallStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLDeleteStatement;
 import fm.liu.timo.parser.ast.stmt.dml.DMLInsertStatement;
@@ -140,19 +197,19 @@ import fm.liu.timo.parser.ast.stmt.mts.MTSRollbackStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSSavepointStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSSetTransactionStatement;
 import fm.liu.timo.parser.util.Pair;
+import fm.liu.timo.parser.util.Tuple3;
 
 public class OutputVisitor extends Visitor {
-    private static final Object[] EMPTY_OBJ_ARRAY = new Object[0];
-    private static final int[] EMPTY_INT_ARRAY = new int[0];
+    protected static final Object[] EMPTY_OBJ_ARRAY = new Object[0];
+    protected static final int[] EMPTY_INT_ARRAY = new int[0];
     protected final StringBuilder appendable;
-    private final Object[] args;
+    protected final Object[] args;
     protected int[] argsIndex;
-    private Map<PlaceHolder, Object> placeHolderToString;
-    private boolean needMerge;
+    protected Map<PlaceHolder, Object> placeHolderToString;
+    protected boolean inUpdateDelete = false;
 
-    public OutputVisitor(StringBuilder appendable, boolean needMerge) {
+    public OutputVisitor(StringBuilder appendable) {
         this(appendable, null);
-        this.needMerge = needMerge;
     }
 
     /**
@@ -287,8 +344,8 @@ public class OutputVisitor extends Visitor {
                 appendable.append(" IS NOT UNKNOWN");
                 break;
             default:
-                throw new IllegalArgumentException("unknown mode for IS expression: "
-                        + node.getMode());
+                throw new IllegalArgumentException(
+                        "unknown mode for IS expression: " + node.getMode());
         }
     }
 
@@ -363,29 +420,11 @@ public class OutputVisitor extends Visitor {
             appendable.append(')');
     }
 
-    private boolean isVName(Expression expr) {
-        if (expr instanceof Identifier) {
-            String name = ((Identifier) expr).getIdTextUpUnescape();
-            return "DNID".equals(name);
-        }
-        return false;
-    }
-
     @Override
     public void visit(BinaryOperatorExpression node) {
-        /** replace <code> dnid = ? </code> with <code>TRUE<code> */
-        if ((node instanceof ComparisionEqualsExpression)) {
-            Expression left = node.getLeftOprand();
-            Expression right = node.getRightOprand();
-            if (isVName(left) || isVName(right)) {
-                appendable.append("TRUE");
-                return;
-            }
-        }
         Expression left = node.getLeftOprand();
-        boolean paren =
-                node.isLeftCombine() ? left.getPrecedence() < node.getPrecedence() : left
-                        .getPrecedence() <= node.getPrecedence();
+        boolean paren = node.isLeftCombine() ? left.getPrecedence() < node.getPrecedence()
+                : left.getPrecedence() <= node.getPrecedence();
         if (paren)
             appendable.append('(');
         left.accept(this);
@@ -395,9 +434,8 @@ public class OutputVisitor extends Visitor {
         appendable.append(' ').append(node.getOperator()).append(' ');
 
         Expression right = node.getRightOprand();
-        paren =
-                node.isLeftCombine() ? right.getPrecedence() <= node.getPrecedence() : right
-                        .getPrecedence() < node.getPrecedence();
+        paren = node.isLeftCombine() ? right.getPrecedence() <= node.getPrecedence()
+                : right.getPrecedence() < node.getPrecedence();
         if (paren)
             appendable.append('(');
         right.accept(this);
@@ -428,6 +466,11 @@ public class OutputVisitor extends Visitor {
     @Override
     public void visit(LogicalOrExpression node) {
         visit((PolyadicOperatorExpression) node);
+    }
+
+    @Override
+    public void visit(LogicalXORExpression node) {
+        visit((BinaryOperatorExpression) node);
     }
 
     @Override
@@ -506,7 +549,8 @@ public class OutputVisitor extends Visitor {
                 appendable.append(" FROM ");
                 break;
             default:
-                throw new IllegalArgumentException("unknown trim direction: " + node.getDirection());
+                throw new IllegalArgumentException(
+                        "unknown trim direction: " + node.getDirection());
         }
         Expression str = node.getString();
         str.accept(this);
@@ -722,7 +766,7 @@ public class OutputVisitor extends Visitor {
         } else if (node.isNchars()) {
             appendable.append('N');
         }
-        appendable.append('\'').append(node.getString()).append('\'');
+        appendable.append('\'').append(new String(node.getBytes())).append('\'');
     }
 
     @Override
@@ -828,8 +872,8 @@ public class OutputVisitor extends Visitor {
             case _DEFAULT:
                 break;
             default:
-                throw new IllegalArgumentException("unkown modifier for match expression: "
-                        + node.getModifier());
+                throw new IllegalArgumentException(
+                        "unkown modifier for match expression: " + node.getModifier());
         }
         appendable.append(')');
     }
@@ -1075,7 +1119,8 @@ public class OutputVisitor extends Visitor {
             }
             appendable.append(")");
         } else {
-            throw new IllegalArgumentException("either ON or USING must be included for OUTER JOIN");
+            throw new IllegalArgumentException(
+                    "either ON or USING must be included for OUTER JOIN");
         }
     }
 
@@ -1168,7 +1213,7 @@ public class OutputVisitor extends Visitor {
         } else {
             limitSize = Long.valueOf(String.valueOf(size));
         }
-        if (needMerge) {
+        if (inUpdateDelete) {
             appendable.append(limitSize + limitOffset);
         } else {
             appendable.append(limitOffset).append(" , ").append(limitSize);
@@ -1177,7 +1222,50 @@ public class OutputVisitor extends Visitor {
 
     @Override
     public void visit(ColumnDefinition node) {
-        throw new UnsupportedOperationException("col_def in CREATE TABLE is partially parsed");
+        visitChild(node.getDataType());
+        if (node.isNotNull()) {
+            appendable.append(" NOT NULL");
+        }
+        Expression defaultVal = node.getDefaultVal();
+        if (defaultVal != null) {
+            appendable.append(" DEFAULT ");
+            if (defaultVal instanceof FunctionExpression) {
+                appendable.append(((FunctionExpression) defaultVal).getFunctionName());
+            } else {
+                visitChild(defaultVal);
+            }
+        } else if (!node.isNotNull()) {
+            appendable.append(" DEFAULT NULL");
+        }
+        if (node.isAutoIncrement()) {
+            appendable.append(" AUTO_INCREMENT");
+        }
+        SpecialIndex specialIndex = node.getSpecialIndex();
+        if (specialIndex != null) {
+            appendable.append(specialIndex).append(" KEY ");
+        }
+        LiteralString comment = node.getComment();
+        if (comment != null) {
+            appendable.append(" COMMENT ");
+            visitChild(comment);
+        }
+        ColumnFormat colFormat = node.getColumnFormat();
+        if (colFormat != null) {
+            appendable.append(" COLUMN_FORMAT ").append(colFormat);
+        }
+        Storage storage = node.getStorage();
+        if (storage != null) {
+            appendable.append(" STORAGE ").append(storage);
+        }
+        Expression onUpdate = node.getOnUpdate();
+        if (onUpdate != null) {
+            appendable.append(" ON UPDATE ");
+            if (defaultVal instanceof FunctionExpression) {
+                appendable.append(((FunctionExpression) defaultVal).getFunctionName());
+            } else {
+                visitChild(onUpdate);
+            }
+        }
     }
 
     @Override
@@ -1205,24 +1293,50 @@ public class OutputVisitor extends Visitor {
     }
 
     @Override
-    public void visit(IndexColumnName node) {
-        // QS_TODO
-    }
-
-    @Override
-    public void visit(TableOptions node) {
-        // QS_TODO
-
-    }
-
-    @Override
     public void visit(AlterSpecification node) {
         throw new UnsupportedOperationException("subclass have not implement visit");
     }
 
     @Override
     public void visit(DataType node) {
-        throw new UnsupportedOperationException("subclass have not implement visit");
+        if (node.getLength() != null) {
+            appendable.append(String.valueOf(node.getTypeName()).toLowerCase()).append("(");
+            node.getLength().accept(this);
+            if (node.getDecimals() != null) {
+                appendable.append(",");
+                node.getDecimals().accept(this);
+            }
+            appendable.append(")");
+        } else if (node.isBinary()) {
+            appendable.append(String.valueOf(node.getTypeName()).toLowerCase()).append(" ");
+            appendable.append(" binary ");
+        } else if (node.getCollectionVals() != null && !node.getCollectionVals().isEmpty()) {
+            appendable.append(String.valueOf(node.getTypeName()).toLowerCase()).append("(");
+            Iterator<Expression> itor = node.getCollectionVals().iterator();
+            while (itor.hasNext()) {
+                itor.next().accept(this);
+                if (itor.hasNext()) {
+                    appendable.append(",");
+                }
+            }
+            appendable.append(")");
+        } else {
+            appendable.append(String.valueOf(node.getTypeName()).toLowerCase()).append(" ");
+        }
+        if (node.isUnsigned()) {
+            appendable.append(" unsigned");
+        }
+        if (node.isZerofill()) {
+            appendable.append(" ZEROFILL");
+        }
+        if (node.getCharSet() != null) {
+            appendable.append(" CHARACTER SET ");
+            node.getCharSet().accept(this);
+        }
+        if (node.getCollation() != null) {
+            appendable.append(" COLLATE ");
+            node.getCollation().accept(this);
+        }
     }
 
     private void printSimpleShowStmt(String attName) {
@@ -1322,8 +1436,8 @@ public class OutputVisitor extends Visitor {
                 appendable.append("PERFORMANCE SCHEMA STATUS");
                 break;
             default:
-                throw new IllegalArgumentException("unrecognized type for SHOW ENGINE: "
-                        + node.getType());
+                throw new IllegalArgumentException(
+                        "unrecognized type for SHOW ENGINE: " + node.getType());
         }
     }
 
@@ -1394,8 +1508,8 @@ public class OutputVisitor extends Visitor {
                 appendable.append("KEYS ");
                 break;
             default:
-                throw new IllegalArgumentException("unrecognized type for SHOW INDEX: "
-                        + node.getType());
+                throw new IllegalArgumentException(
+                        "unrecognized type for SHOW INDEX: " + node.getType());
         }
         appendable.append("IN ");
         node.getTable().accept(this);
@@ -1717,8 +1831,10 @@ public class OutputVisitor extends Visitor {
         }
         Limit limit = node.getLimit();
         if (limit != null) {
+            inUpdateDelete = true;
             appendable.append(' ');
             limit.accept(this);
+            inUpdateDelete = false;
         }
     }
 
@@ -2026,8 +2142,10 @@ public class OutputVisitor extends Visitor {
         }
         Limit limit = node.getLimit();
         if (limit != null) {
+            inUpdateDelete = true;
             appendable.append(' ');
             limit.accept(this);
+            inUpdateDelete = false;
         }
     }
 
@@ -2045,12 +2163,6 @@ public class OutputVisitor extends Visitor {
     @Override
     public void visit(DDLCreateIndexStatement node) {
         throw new UnsupportedOperationException("CREATE INDEX is partially parsed");
-    }
-
-    @Override
-    public void visit(DDLCreateTableStatement node) {
-        // throw new UnsupportedOperationException(
-        // "CREATE TABLE is partially parsed");
     }
 
     @Override
@@ -2097,8 +2209,8 @@ public class OutputVisitor extends Visitor {
             case UNDEF:
                 break;
             default:
-                throw new IllegalArgumentException("unsupported mode for DROP TABLE: "
-                        + node.getMode());
+                throw new IllegalArgumentException(
+                        "unsupported mode for DROP TABLE: " + node.getMode());
         }
     }
 
@@ -2146,4 +2258,1014 @@ public class OutputVisitor extends Visitor {
         visit((BinaryOperatorExpression) node);
     }
 
+    @Override
+    public void visit(ShowCreateDatabase node) {
+        appendable.append("SHOW CREATE ").append(node.getType().name()).append(' ')
+                .append(node.isIfNotExists() ? "IF NOT EXISTS " : "");
+        node.getDbName().accept(this);
+    }
+
+    @Override
+    public void visit(ExplainStatement node) {
+        switch (node.getCommand()) {
+            case EXPLAIN:
+                appendable.append("EXPLAIN ");
+                break;
+            case DESCRIBE:
+                appendable.append("DESCRIBE ");
+                break;
+            case DESC:
+                appendable.append("DESC ");
+                break;
+            default:
+                throw new IllegalArgumentException(
+                        "unknown EXPLAIN Syntax for : " + node.getCommand());
+        }
+        if (node.getTblName() != null) {
+            visit(node.getTblName());
+            // node.getTblName().accept(this);
+            if (node.getColName() != null) {
+                appendable.append(" ");
+                visit(node.getColName());
+                // node.getTblName().accept(this);
+            } else if (node.getWild() != null) {
+                appendable.append(" ");
+                appendable.append(node.getWild());
+            }
+        } else {
+            if (node.getExplainType() != null) {
+                switch (node.getExplainType()) {
+                    case EXTENDED:
+                        appendable.append("EXTENDED");
+                        break;
+                    case PARTITIONS:
+                        appendable.append("PARTITIONS");
+                    case FORMAT:
+                        if (node.getFormatName() != null) {
+                            appendable.append("FORMAT").append("=");
+                            switch (node.getFormatName()) {
+                                case TRADITIONAL:
+                                    appendable.append("TRADITIONAL");
+                                    break;
+                                case JSON:
+                                    appendable.append("JSON");
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    default:
+                        break;
+                }
+                appendable.append(" ");
+            }
+            if (node.getConnectionId() != null) {
+                appendable.append("FOR CONNECTION ").append(node.getConnectionId().getNumber());
+            } else if (node.getExplainableStmt() != null) {
+                node.getExplainableStmt().accept(this);
+            }
+        }
+    }
+
+    @Override
+    public void visit(DDLCreateTriggerStatement node) {
+        appendable.append("CREATE");
+        Expression definer = node.getDefiner();
+        if (definer != null) {
+            appendable.append(" DEFINER = ");
+            visitChild(definer);
+        }
+        appendable.append(" TRIGGER ");
+        visitChild(node.getTriggerName());
+        appendable.append(" ").append(node.getTriggerTime()).append(" ")
+                .append(node.getTriggerEvent()).append(" ON ");
+        visitChild(node.getTable());
+        appendable.append(" FOR EACH ROW ");
+        TriggerOrder order = node.getTriggerOrder();
+        if (order != null) {
+            appendable.append(order).append(" ");
+            visitChild(node.getOtherTriggerName());
+            appendable.append(" ");
+        }
+        appendable.append("\n");
+        SQLStatement stmt = node.getStmt();
+        if (stmt != null && stmt instanceof CompoundStatement) {
+            visitChild(stmt);
+        } else {
+            visitChild(stmt);
+            appendable.append(";\n");
+        }
+    }
+
+    @Override
+    public void visit(BeginEndStatement node) {
+        Identifier label = node.getLabel();
+        if (label != null) {
+            visitChild(label);
+            appendable.append(":");
+        }
+        appendable.append("BEGIN\n");
+        List<SQLStatement> list = node.getStatements();
+        for (SQLStatement li : list) {
+            visitChild(li);
+            if (!(li instanceof CompoundStatement)) {
+                appendable.append(";\n");
+            }
+        }
+        appendable.append("END");
+        if (label != null) {
+            appendable.append(" ");
+            visitChild(label);
+        }
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(IfStatement node) {
+        List<Pair<Expression, List<SQLStatement>>> list = node.getIfStatements();
+        for (int i = 0, size = list.size(); i < size; i++) {
+            Pair<Expression, List<SQLStatement>> li = list.get(i);
+            if (i == 0) {
+                appendable.append("IF ");
+            } else {
+                appendable.append("ELSE IF ");
+            }
+            visitChild(li.getKey());
+            appendable.append(" THEN ");
+            Iterator<SQLStatement> iter = li.getValue().iterator();
+            while (iter.hasNext()) {
+                SQLStatement stmt = iter.next();
+                if (stmt != null) {
+                    visitChild(stmt);
+                    if (!(stmt instanceof CompoundStatement)) {
+                        appendable.append(";\n");
+                    }
+                }
+            }
+        }
+        Iterator<SQLStatement> iter = node.getElseStatement().iterator();
+        if (iter.hasNext()) {
+            appendable.append("ELSE ");
+        }
+        while (iter.hasNext()) {
+            SQLStatement stmt = iter.next();
+            if (stmt != null) {
+                visitChild(stmt);
+                if (!(stmt instanceof CompoundStatement)) {
+                    appendable.append(";\n");
+                }
+            }
+        }
+        appendable.append("END IF;\n");
+    }
+
+    @Override
+    public void visit(NewRowPrimary node) {
+        appendable.append("NEW.").append(node.getVarText());
+    }
+
+    @Override
+    public void visit(OldRowPrimary node) {
+        appendable.append("OLD.").append(node.getVarText());
+    }
+
+    @Override
+    public void visit(LoopStatement node) {
+        Identifier label = node.getLabel();
+        if (label != null) {
+            visitChild(label);
+            appendable.append(":");
+        }
+        appendable.append("LOOP\n");
+        SQLStatement stmt = node.getStmt();
+        visitChild(stmt);
+        if (stmt != null && !(stmt instanceof CompoundStatement)) {
+            appendable.append(";\n");
+        }
+        appendable.append("END LOOP");
+        if (label != null) {
+            appendable.append(" ");
+            visitChild(label);
+        }
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(IterateStatement node) {
+        appendable.append("IETRATE ");
+        visitChild(node.getLabel());
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(LeaveStatement node) {
+        appendable.append("LEAVE ");
+        visitChild(node.getLabel());
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(ReturnStatement node) {
+        appendable.append("RETURN ");
+        visitChild(node.getLabel());
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(RepeatStatement node) {
+        Identifier label = node.getLabel();
+        if (label != null) {
+            visitChild(label);
+            appendable.append(":");
+        }
+        appendable.append("REPEAT\n");
+        SQLStatement stmt = node.getStmt();
+        visitChild(stmt);
+        if (stmt != null && !(stmt instanceof CompoundStatement)) {
+            appendable.append(";\n");
+        }
+        appendable.append("UNTIL ");
+        visitChild(node.getUtilCondition());
+        appendable.append(" END REPEAT");
+        if (label != null) {
+            appendable.append(" ");
+            visitChild(label);
+        }
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(WhileStatement node) {
+        Identifier label = node.getLabel();
+        if (label != null) {
+            visitChild(label);
+            appendable.append(":");
+        }
+        appendable.append("WHILE ");
+        visitChild(node.getWhileCondition());
+        appendable.append(" DO\n");
+        SQLStatement stmt = node.getStmt();
+        visitChild(stmt);
+        if (stmt != null && !(stmt instanceof CompoundStatement)) {
+            appendable.append(";\n");
+        }
+        appendable.append("END WHILE");
+        if (label != null) {
+            appendable.append(" ");
+            visitChild(label);
+        }
+        appendable.append(";\n");
+    }
+
+    @Override
+    public void visit(CaseStatement node) {
+        Expression caseValue = node.getCaseValue();
+        if (caseValue != null) {
+            appendable.append("CASE ");
+            visitChild(caseValue);
+            appendable.append("\n");
+        } else {
+            appendable.append("CASE\n");
+        }
+        List<Pair<Expression, SQLStatement>> list = node.getWhenList();
+        for (Pair<Expression, SQLStatement> li : list) {
+            appendable.append("WHEN ");
+            visitChild(li.getKey());
+            appendable.append(" THEN ");
+            SQLStatement stmt = li.getValue();
+            if (stmt != null) {
+                visitChild(stmt);
+                if (!(stmt instanceof CompoundStatement)) {
+                    appendable.append(";\n");
+                }
+            }
+        }
+        SQLStatement elseStmt = node.getElseStmt();
+        if (elseStmt != null) {
+            appendable.append("ELSE ");
+            visitChild(elseStmt);
+            if (!(elseStmt instanceof CompoundStatement)) {
+                appendable.append(";\n");
+            }
+        }
+        appendable.append("END CASE;\n");
+    }
+
+    @Override
+    public void visit(DeclareStatement node) {
+        appendable.append("DECLARE ");
+        Iterator<Identifier> iter = node.getVarNames().iterator();
+        while (iter.hasNext()) {
+            visitChild(iter.next());
+            if (iter.hasNext()) {
+                appendable.append(",");
+            }
+        }
+        appendable.append(" ");
+        visitChild(node.getDataType());
+        Expression defaultVal = node.getDefaultVal();
+        if (defaultVal != null) {
+            appendable.append("DEFAULT ");
+            visitChild(defaultVal);
+        }
+        appendable.append(";\n");
+    }
+
+    public void visit(DeclareHandlerStatement node) {
+        appendable.append("DECLARE ").append(node.getAction()).append(" HANDLER\nFOR ");
+        Iterator<ConditionValue> iter = node.getConditionValues().iterator();
+        while (iter.hasNext()) {
+            visit(iter.next());
+            if (iter.hasNext()) {
+                appendable.append(" , ");
+            }
+        }
+        appendable.append("\n");
+        SQLStatement stmt = node.getStmt();
+        if (stmt != null) {
+            visitChild(stmt);
+            if (!(stmt instanceof CompoundStatement)) {
+                appendable.append(";\n");
+            }
+        }
+    }
+
+    public void visit(ConditionValue value) {
+        switch (value.getType()) {
+            case ErrorCode:
+                visitChild(value.getValue());
+                break;
+            case Exception:
+                appendable.append("SQLEXCEPTION");
+                break;
+            case Name:
+                visitChild(value.getValue());
+                break;
+            case NotFound:
+                appendable.append("NOT FOUND");
+                break;
+            case State:
+                appendable.append("SQLSTATE VALUE ");
+                visitChild(value.getValue());
+                break;
+            case Unknown:
+                break;
+            case Warning:
+                appendable.append("SQLWARNING");
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void visit(DeclareConditionStatement node) {
+        appendable.append("DECLARE ");
+        visitChild(node.getName());
+        appendable.append(" CONDITION FOR ");
+        ConditionValue value = node.getValue();
+        visit(value);
+        appendable.append(";\n");
+    }
+
+    public void visit(CursorDeclareStatement node) {
+        appendable.append("DECLARE ");
+        visitChild(node.getName());
+        appendable.append(" CURSOR FOR ");
+        SQLStatement stmt = node.getStmt();
+        if (stmt != null) {
+            visitChild(stmt);
+            if (!(stmt instanceof CompoundStatement)) {
+                appendable.append(";\n");
+            }
+        }
+    }
+
+    public void visit(CursorCloseStatement node) {
+        appendable.append("CLOSE ");
+        visitChild(node.getName());
+        appendable.append(";\n");
+    }
+
+    public void visit(CursorOpenStatement node) {
+        appendable.append("OPEN ");
+        visitChild(node.getName());
+        appendable.append(";\n");
+    }
+
+    public void visit(CursorFetchStatement node) {
+        appendable.append("FETCH NEXT FROM ");
+        visitChild(node.getName());
+        appendable.append("INTO ");
+        Iterator<Identifier> iter = node.getVarNames().iterator();
+        while (iter.hasNext()) {
+            visitChild(iter.next());
+            if (iter.hasNext()) {
+                appendable.append(",");
+            }
+        }
+        appendable.append(";\n");
+    }
+
+    public void visit(SignalStatement node) {
+        appendable.append("SIGNAL ");
+        ConditionValue value = node.getConditionValue();
+        switch (value.getType()) {
+            case State:
+                appendable.append("SQLSTATE VALUE ");
+            default:
+                appendable.append("\n");
+                visitChild(value.getValue());
+                break;
+        }
+        List<Pair<ConditionInfoItemName, Literal>> list = node.getInformationItems();
+        if (list != null && !list.isEmpty()) {
+            appendable.append("SET ");
+            Iterator<Pair<ConditionInfoItemName, Literal>> iter = list.iterator();
+            while (iter.hasNext()) {
+                Pair<ConditionInfoItemName, Literal> p = iter.next();
+                appendable.append(p.getKey().name()).append("=");
+                visitChild(p.getValue());
+                if (iter.hasNext()) {
+                    appendable.append(",");
+                } else {
+                    appendable.append(";\n");
+                }
+            }
+        }
+    }
+
+    public void visit(ResignalStatement node) {
+        appendable.append("RESIGNAL ");
+        ConditionValue value = node.getConditionValue();
+        switch (value.getType()) {
+            case State:
+                appendable.append("SQLSTATE VALUE ");
+            default:
+                appendable.append("\n");
+                visitChild(value.getValue());
+                break;
+        }
+        List<Pair<ConditionInfoItemName, Literal>> list = node.getInformationItems();
+        if (list != null && !list.isEmpty()) {
+            appendable.append("SET ");
+            Iterator<Pair<ConditionInfoItemName, Literal>> iter = list.iterator();
+            while (iter.hasNext()) {
+                Pair<ConditionInfoItemName, Literal> p = iter.next();
+                appendable.append(p.getKey().name()).append("=");
+                visitChild(p.getValue());
+                if (iter.hasNext()) {
+                    appendable.append(",");
+                } else {
+                    appendable.append(";\n");
+                }
+            }
+        }
+    }
+
+    public void visit(GetDiagnosticsStatement node) {
+        appendable.append("GET ");
+        switch (node.getType()) {
+            case CURRENT:
+                appendable.append("CURRENT DIAGNOSTICS ");
+                break;
+            case NONE:
+                appendable.append("DIAGNOSTICS ");
+                break;
+            case STACKED:
+                appendable.append("STACKED DIAGNOSTICS ");
+                break;
+            default:
+                break;
+
+        }
+        Expression conditionNumber = node.getConditionNumber();
+        if (conditionNumber != null) {
+            appendable.append("CONDITION ");
+            visitChild(conditionNumber);
+            appendable.append("\n");
+            Iterator<Pair<Expression, ConditionInfoItemName>> iter =
+                    node.getConditionItems().iterator();
+            while (iter.hasNext()) {
+                Pair<Expression, ConditionInfoItemName> p = iter.next();
+                visitChild(p.getKey());
+                appendable.append("=").append(p.getValue().name());
+                if (iter.hasNext()) {
+                    appendable.append(",");
+                } else {
+                    appendable.append(";\n");
+                }
+            }
+        } else {
+            Iterator<Pair<Expression, StatementInfoItemName>> iter =
+                    node.getStatementItems().iterator();
+            while (iter.hasNext()) {
+                Pair<Expression, StatementInfoItemName> p = iter.next();
+                visitChild(p.getKey());
+                appendable.append("=").append(p.getValue().name());
+                if (iter.hasNext()) {
+                    appendable.append(",");
+                } else {
+                    appendable.append(";\n");
+                }
+            }
+        }
+    }
+
+    @Override
+    public void visit(DDLCreateProcedureStatement node) {
+        appendable.append("CREATE");
+        Expression definer = node.getDefiner();
+        if (definer != null) {
+            appendable.append(" DEFINER = ");
+            visitChild(definer);
+        }
+        appendable.append(" PROCEDURE ");
+        visitChild(node.getName());
+        appendable.append("(");
+        Iterator<Tuple3<ProcParameterType, Identifier, DataType>> iter =
+                node.getParameters().iterator();
+        while (iter.hasNext()) {
+            Tuple3<ProcParameterType, Identifier, DataType> tuple = iter.next();
+            switch (tuple._1()) {
+                case IN:
+                    appendable.append("IN ");
+                    break;
+                case INOUT:
+                    appendable.append("INOUT ");
+                    break;
+                case NONE:
+                    break;
+                case OUT:
+                    appendable.append("OUT ");
+                    break;
+                default:
+                    break;
+            }
+            visitChild(tuple._2());
+            appendable.append(" ");
+            visitChild(tuple._3());
+            if (iter.hasNext()) {
+                appendable.append(",");
+            }
+        }
+        appendable.append(")\n");
+        Characteristics charact = node.getCharacteristics();
+        if (!charact.isEmpty()) {
+            Expression comment = charact.getComment();
+            if (comment != null) {
+                appendable.append("COMMENT ");
+                visitChild(comment);
+                appendable.append(" ");
+            }
+            Characteristic tmp = charact.getLanguageSql();
+            if (tmp != null) {
+                appendable.append("LANGUAGE SQL ");
+            }
+            tmp = charact.getDeterministic();
+            if (tmp != null) {
+                if (tmp == Characteristic.NOT_DETERMINISTIC) {
+                    appendable.append("NOT ");
+                }
+                appendable.append("DETERMINISTIC ");
+            }
+            tmp = charact.getSqlCharacteristic();
+            if (tmp != null) {
+                switch (tmp) {
+                    case CONTAINS_SQL:
+                        appendable.append("CONTAINS SQL ");
+                        break;
+                    case NO_SQL:
+                        appendable.append("NO SQL ");
+                        break;
+                    case READS_SQL_DATA:
+                        appendable.append("READS SQL DATA ");
+                        break;
+                    case MODIFIES_SQL_DATA:
+                        appendable.append("MODIFIES SQL DATA ");
+                        break;
+                    default:
+                        break;
+                }
+            }
+            tmp = charact.getSqlSecurity();
+            if (tmp != null) {
+                if (tmp == Characteristic.SQL_SECURITY_DEFINER) {
+                    appendable.append("SQL SECURITY DEFINER ");
+                } else {
+                    appendable.append("SQL SECURITY INVOKER ");
+                }
+            }
+            appendable.append("\n");
+        }
+        SQLStatement stmt = node.getStmt();
+        visitChild(stmt);
+        if (stmt != null && !(stmt instanceof CompoundStatement)) {
+            appendable.append(";\n");
+        }
+    }
+
+    @Override
+    public void visit(DDLCreateFunctionStatement node) {
+        appendable.append("CREATE");
+        Expression definer = node.getDefiner();
+        if (definer != null) {
+            appendable.append(" DEFINER = ");
+            visitChild(definer);
+        }
+        appendable.append(" FUNCTION ");
+        visitChild(node.getName());
+        appendable.append("(");
+        Iterator<Pair<Identifier, DataType>> iter = node.getParameters().iterator();
+        while (iter.hasNext()) {
+            Pair<Identifier, DataType> p = iter.next();
+            visitChild(p.getKey());
+            appendable.append(" ");
+            visitChild(p.getValue());
+            if (iter.hasNext()) {
+                appendable.append(",");
+            }
+        }
+        appendable.append(")\n");
+        appendable.append("RETURNS ");
+        visitChild(node.getReturns());
+        appendable.append("\n");
+        Characteristics charact = node.getCharacteristics();
+        if (!charact.isEmpty()) {
+            Expression comment = charact.getComment();
+            if (comment != null) {
+                appendable.append("COMMENT ");
+                visitChild(comment);
+                appendable.append(" ");
+            }
+            Characteristic tmp = charact.getLanguageSql();
+            if (tmp != null) {
+                appendable.append("LANGUAGE SQL ");
+            }
+            tmp = charact.getDeterministic();
+            if (tmp != null) {
+                if (tmp == Characteristic.NOT_DETERMINISTIC) {
+                    appendable.append("NOT ");
+                }
+                appendable.append("DETERMINISTIC ");
+            }
+            tmp = charact.getSqlCharacteristic();
+            if (tmp != null) {
+                switch (tmp) {
+                    case CONTAINS_SQL:
+                        appendable.append("CONTAINS SQL ");
+                        break;
+                    case NO_SQL:
+                        appendable.append("NO SQL ");
+                        break;
+                    case READS_SQL_DATA:
+                        appendable.append("READS SQL DATA ");
+                        break;
+                    case MODIFIES_SQL_DATA:
+                        appendable.append("MODIFIES SQL DATA ");
+                        break;
+                    default:
+                        break;
+                }
+            }
+            tmp = charact.getSqlSecurity();
+            if (tmp != null) {
+                if (tmp == Characteristic.SQL_SECURITY_DEFINER) {
+                    appendable.append("SQL SECURITY DEFINER ");
+                } else {
+                    appendable.append("SQL SECURITY INVOKER ");
+                }
+            }
+            appendable.append("\n");
+        }
+        SQLStatement stmt = node.getStmt();
+        visitChild(stmt);
+        if (stmt != null && !(stmt instanceof CompoundStatement)) {
+            appendable.append(";\n");
+        }
+    }
+
+    @Override
+    public void visit(DDLCreateLikeStatement node) {
+        appendable.append("CREATE ");
+        if (node.isTemporary()) {
+            appendable.append("TEMPORARY ");
+        }
+        appendable.append("TABLE ");
+        if (node.isIfNotExists()) {
+            appendable.append("IF NOT EXISTS ");
+        }
+        visitChild(node.getTable());
+        appendable.append(" LIKE");
+        visitChild(node.getLikeTable());
+    }
+
+    @Override
+    public void visit(DDLCreateTableStatement node) {
+        appendable.append("CREATE ");
+        if (node.isTemporary()) {
+            appendable.append("TEMPORARY ");
+        }
+        appendable.append("TABLE ");
+        if (node.isIfNotExists()) {
+            appendable.append("IF NOT EXISTS ");
+        }
+        visitChild(node.getTable());
+        appendable.append("(\n  ");
+        List<Pair<Identifier, ColumnDefinition>> columns = node.getColDefs();
+        for (int i = 0, size = columns.size(); i < size; i++) {
+            if (i != 0) {
+                appendable.append(",\n  ");
+            }
+            Pair<Identifier, ColumnDefinition> column = columns.get(i);
+            visitChild(column.getKey());
+            appendable.append(" ");
+            visitChild(column.getValue());
+        }
+        visit(node.getPrimaryKey(), KeyType.PRIMARY);
+        for (Pair<Identifier, IndexDefinition> key : node.getUniqueKeys()) {
+            visit(key.getValue(), KeyType.UNIQUE);
+        }
+        for (Pair<Identifier, IndexDefinition> key : node.getKeys()) {
+            visit(key.getValue(), KeyType.KEY);
+        }
+        for (Pair<Identifier, IndexDefinition> key : node.getFullTextKeys()) {
+            visit(key.getValue(), KeyType.FULLTEXT);
+        }
+        for (Pair<Identifier, IndexDefinition> key : node.getSpatialKeys()) {
+            visit(key.getValue(), KeyType.SPATIAL);
+        }
+        List<ForeignKeyDefinition> foreignKeyDefs = node.getForeignKeyDefs();
+        for (int i = 0, size = foreignKeyDefs.size(); i < size; i++) {
+            appendable.append(",\n");
+            visitChild(foreignKeyDefs.get(i));
+        }
+        appendable.append("\n)");
+        visitChild(node.getTableOptions());
+    }
+
+
+    @Override
+    public void visit(TableOptions node) {
+        Expression exp = node.getAutoIncrement();
+        if (exp != null) {
+            appendable.append(" AUTO_INCREMENT=");
+            visitChild(exp);
+        }
+        exp = node.getAvgRowLength();
+        if (exp != null) {
+            appendable.append(" AVG_ROW_LENGTH=");
+            visitChild(exp);
+        }
+        Identifier id = node.getEngine();
+        if (id != null) {
+            appendable.append(" ENGINE=");
+            visitChild(id);
+        }
+        id = node.getCharSet();
+        if (id != null) {
+            appendable.append(" DEFAULT CHARSET=");
+            visitChild(id);
+        }
+        Boolean checkSum = node.getCheckSum();
+        if (checkSum != null) {
+            appendable.append(" CHECKSUM=").append(checkSum.booleanValue() ? 1 : 0);
+        }
+        id = node.getCollation();
+        if (id != null) {
+            appendable.append(" DEFAULT COLLATE=");
+            visitChild(id);
+        }
+        LiteralString string = node.getComment();
+        if (string != null) {
+            appendable.append(" COMMENT=");
+            visitChild(string);
+        }
+        Compression compression = node.getCompression();
+        if (compression != null) {
+            appendable.append(" COMPRESSION='").append(compression).append("'");
+        }
+        string = node.getConnection();
+        if (string != null) {
+            appendable.append(" CONNECTION=");
+            visitChild(string);
+        }
+        string = node.getDataDir();
+        if (string != null) {
+            appendable.append(" DATE DIRECTORY=");
+            visitChild(string);
+        }
+        string = node.getIndexDir();
+        if (string != null) {
+            appendable.append(" INDEX DIRECTORY=");
+            visitChild(string);
+        }
+        Boolean delayKeyWrite = node.getDelayKeyWrite();
+        if (delayKeyWrite != null) {
+            appendable.append(" DELAY_KEY_WRITE=").append(delayKeyWrite.booleanValue() ? 1 : 0);
+        }
+        Boolean encryption = node.getEncryption();
+        if (encryption != null) {
+            appendable.append(" ENCRYPTION=").append(delayKeyWrite.booleanValue() ? "'Y'" : "'N'");
+        }
+        InsertMethod insertMethod = node.getInsertMethod();
+        if (insertMethod != null) {
+            appendable.append(" INSERT_METHOD=").append(insertMethod);
+        }
+        exp = node.getKeyBlockSize();
+        if (exp != null) {
+            appendable.append(" KEY_BLOCK_SIZE=");
+            visitChild(exp);
+        }
+        exp = node.getMaxRows();
+        if (exp != null) {
+            appendable.append(" MAX_ROWS=");
+            visitChild(exp);
+        }
+        exp = node.getMinRows();
+        if (exp != null) {
+            appendable.append(" MIN_ROWS=");
+            visitChild(exp);
+        }
+        PackKeys packKeys = node.getPackKeys();
+        if (packKeys != null) {
+            appendable.append(" PACK_KEYS=");
+            switch (packKeys) {
+                case DEFAULT:
+                    appendable.append("DEFAULT");
+                    break;
+                case FALSE:
+                    appendable.append(0);
+                    break;
+                case TRUE:
+                    appendable.append(1);
+                    break;
+                default:
+                    break;
+            }
+        }
+        string = node.getPassword();
+        if (string != null) {
+            appendable.append(" PASSWORD=");
+            visitChild(string);
+        }
+        RowFormat rowFormat = node.getRowFormat();
+        if (rowFormat != null) {
+            appendable.append(" ROW_FORMAT=").append(rowFormat);
+        }
+        /**
+         * TODO 
+         * | STATS_AUTO_RECALC [=] {DEFAULT|0|1}
+         * | STATS_PERSISTENT [=] {DEFAULT|0|1}
+         * | STATS_SAMPLE_PAGES [=] value
+         * | TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
+         */
+        List<Identifier> union = node.getUnion();
+        if (union != null && !union.isEmpty()) {
+            appendable.append(" UNION=(");
+            for (int i = 0, size = union.size(); i < size; i++) {
+                if (i != 0) {
+                    appendable.append(",");
+                }
+                visitChild(union.get(i));
+            }
+            appendable.append(")");
+        }
+    }
+
+    public void visit(IndexDefinition key, KeyType type) {
+        if (key == null) {
+            return;
+        }
+        appendable.append(",\n");
+        switch (type) {
+            case SPATIAL: {
+                appendable.append("  SPATIAL KEY ");
+                visitChild(key.getIndexName());
+                break;
+            }
+            case FULLTEXT: {
+                appendable.append("  FULLTEXT KEY ");
+                visitChild(key.getIndexName());
+                break;
+            }
+            case KEY: {
+                appendable.append("  KEY ");
+                visitChild(key.getIndexName());
+                visitChild(key.getIndexType());
+                break;
+            }
+            case PRIMARY: {
+                Identifier symbol = key.getSymbol();
+                if (symbol != null) {
+                    appendable.append("  CONSTRAINT ");
+                    visitChild(symbol);
+                    appendable.append("PRIMARY KEY ");
+                } else {
+                    appendable.append("  PRIMARY KEY ");
+                }
+                visitChild(key.getIndexType());
+                break;
+            }
+            case UNIQUE: {
+                Identifier symbol = key.getSymbol();
+                if (symbol != null) {
+                    appendable.append("  CONSTRAINT ");
+                    visitChild(symbol);
+                    appendable.append("UNIQUE KEY ");
+                } else {
+                    appendable.append("  UNIQUE KEY ");
+                }
+                visitChild(key.getIndexName());
+                visitChild(key.getIndexType());
+                break;
+            }
+            default:
+                break;
+        }
+        appendable.append("(");
+        List<IndexColumnName> cols = key.getColumns();
+        for (int i = 0, size = cols.size(); i < size; i++) {
+            if (i != 0) {
+                appendable.append(",");
+            }
+            visitChild(cols.get(i));
+        }
+        appendable.append(")");
+        visitChild(key.getOptions());
+    }
+
+    @Override
+    public void visit(ForeignKeyDefinition node) {
+        Identifier symbol = node.getSymbol();
+        if (symbol != null) {
+            appendable.append("  CONSTRAINT ");
+            visitChild(symbol);
+            appendable.append(" FOREIGN KEY ");
+        } else {
+            appendable.append("  FOREIGN KEY ");
+        }
+        visitChild(node.getIndexName());
+        appendable.append("(");
+        List<IndexColumnName> cols = node.getColumns();
+        for (int i = 0, size = cols.size(); i < size; i++) {
+            if (i != 0) {
+                appendable.append(",");
+            }
+            visitChild(cols.get(i));
+        }
+        appendable.append(") REFERENCES ");
+        visitChild(node.getReferenceTable());
+        appendable.append("(");
+        cols = node.getReferenceColumns();
+        for (int i = 0, size = cols.size(); i < size; i++) {
+            if (i != 0) {
+                appendable.append(",");
+            }
+            visitChild(cols.get(i));
+        }
+        appendable.append(")");
+        REFERENCE_OPTION onDelete = node.getOnDelete();
+        if (onDelete != null) {
+            appendable.append(" ON DELETE ");
+            visit(onDelete);
+        }
+        REFERENCE_OPTION onUpdate = node.getOnUpdate();
+        if (onUpdate != null) {
+            appendable.append(" ON UPDATE ");
+            visit(onDelete);
+        }
+    }
+
+    private void visit(REFERENCE_OPTION option) {
+        switch (option) {
+            case CASCADE:
+                appendable.append("CASCADE");
+                break;
+            case NO_ACTION:
+                appendable.append("NO ACTION");
+                break;
+            case RESTRICT:
+                appendable.append("RESTRICT");
+                break;
+            case SET_NULL:
+                appendable.append("SET NULL");
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void visit(IndexColumnName node) {
+        visitChild(node.getColumnName());
+        Expression length = node.getLength();
+        if (length != null) {
+            appendable.append("(");
+            visitChild(length);
+            appendable.append(")");
+        }
+        if (!node.isAsc()) {
+            appendable.append(" DESC");
+        }
+    }
 }

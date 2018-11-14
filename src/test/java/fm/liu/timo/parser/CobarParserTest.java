@@ -36,7 +36,7 @@ public class CobarParserTest {
         MySQLDMLSelectParser parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
         DMLSelectStatement select = parser.select();
         StringBuilder sb = new StringBuilder();
-        select.accept(new OutputVisitor(sb, false));
+        select.accept(new OutputVisitor(sb));
         System.out.println(sb.toString());
     }
 
@@ -71,7 +71,7 @@ public class CobarParserTest {
     private String parseAndFormatSql(String sql) throws SQLSyntaxErrorException {
         SQLStatement ast = SQLParserDelegate.parse(sql);
         StringBuilder sb = new StringBuilder();
-        ast.accept(new OutputVisitor(sb, false));
+        ast.accept(new OutputVisitor(sb));
         return sb.toString();
     }
 

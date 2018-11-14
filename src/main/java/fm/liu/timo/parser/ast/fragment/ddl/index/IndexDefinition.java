@@ -20,19 +20,31 @@ import java.util.Collections;
 import java.util.List;
 
 import fm.liu.timo.parser.ast.ASTNode;
+import fm.liu.timo.parser.ast.expression.primary.Identifier;
 import fm.liu.timo.parser.visitor.Visitor;
 
 /**
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public class IndexDefinition implements ASTNode {
+
     public static enum IndexType {
         BTREE, HASH
     }
 
+    public static enum KeyType {
+        PRIMARY, UNIQUE, KEY, FULLTEXT, SPATIAL
+    }
+
+    /**
+     * 形如: | [CONSTRAINT [symbol]] PRIMARY KEY [index_type]
+     * 有一个 symbol 一个 name
+     */
+    private Identifier indexName = null;
     private final IndexType indexType;
     private final List<IndexColumnName> columns;
     private final List<IndexOption> options;
+    private Identifier symbol;
 
     @SuppressWarnings("unchecked")
     public IndexDefinition(IndexType indexType, List<IndexColumnName> columns,
@@ -44,6 +56,14 @@ public class IndexDefinition implements ASTNode {
         this.options =
                 (List<IndexOption>) (options == null || options.isEmpty() ? Collections.emptyList()
                         : options);
+    }
+
+    public Identifier getIndexName() {
+        return indexName;
+    }
+
+    public void setIndexName(Identifier indexName) {
+        this.indexName = indexName;
     }
 
     public IndexType getIndexType() {
@@ -64,10 +84,21 @@ public class IndexDefinition implements ASTNode {
         return options;
     }
 
-    @Override
-    public void accept(Visitor visitor) {
-        // QS_TODO
-
+    public Identifier getSymbol() {
+        return symbol;
     }
 
+    public void setSymbol(Identifier symbol) {
+        this.symbol = symbol;
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
+
+    @Override
+    public String toString() {
+        return "IndexDefinition:" + indexName + indexType;
+    }
 }

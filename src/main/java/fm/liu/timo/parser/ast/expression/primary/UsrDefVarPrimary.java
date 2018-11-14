@@ -37,4 +37,5 @@ public class UsrDefVarPrimary extends VariableExpression {
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
 }

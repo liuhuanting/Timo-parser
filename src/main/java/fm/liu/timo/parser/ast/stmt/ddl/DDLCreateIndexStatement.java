@@ -17,31 +17,57 @@
 package fm.liu.timo.parser.ast.stmt.ddl;
 
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
+import fm.liu.timo.parser.ast.fragment.ddl.index.IndexDefinition;
 import fm.liu.timo.parser.visitor.Visitor;
 
 /**
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public class DDLCreateIndexStatement implements DDLStatement {
-    private final Identifier indexName;
-    private final Identifier table;
 
-    public DDLCreateIndexStatement(Identifier indexName, Identifier table) {
-        this.indexName = indexName;
-        this.table = table;
+    /** | ALGORITHM [=] {DEFAULT|INPLACE|COPY} @author ZC.CUI */
+    public enum Algorithm {
+        DEFAULT, INPLACE, COPY
     }
 
-    public Identifier getIndexName() {
-        return indexName;
+    /** | LOCK [=] {DEFAULT|NONE|SHARED|EXCLUSIVE} @author ZC.CUI*/
+    public enum Lock {
+        DEFAULT, NONE, SHARED, EXCLUSIVE
+    }
+
+    private final Identifier table;
+    private final IndexDefinition indexDefinition;
+    private final Algorithm algorithm;
+    private final Lock lock;
+
+    public DDLCreateIndexStatement(Identifier table, IndexDefinition indexDefinition,
+            Algorithm algorithm, Lock lock) {
+        this.table = table;
+        this.indexDefinition = indexDefinition;
+        this.algorithm = algorithm;
+        this.lock = lock;
     }
 
     public Identifier getTable() {
         return table;
     }
 
+    public IndexDefinition getIndexDefinition() {
+        return indexDefinition;
+    }
+
+    public Algorithm getAlgorithm() {
+        return algorithm;
+    }
+
+    public Lock getLock() {
+        return lock;
+    }
+
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
 
 }

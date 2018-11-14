@@ -91,6 +91,7 @@ public class MySQLDMLUpdateParser extends MySQLDMLParser {
             orderBy = orderBy();
             limit = limit();
         }
-        return new DMLUpdateStatement(lowPriority, ignore, tableRefs, values, where, orderBy, limit);
+        return new DMLUpdateStatement(lowPriority, ignore, tableRefs, values, where, orderBy,
+                limit);
     }
 }

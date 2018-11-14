@@ -27,7 +27,7 @@ import fm.liu.timo.parser.visitor.Visitor;
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public class RowExpression extends PrimaryExpression {
-    private final List<Expression> rowExprList;
+    private List<Expression> rowExprList;
 
     public RowExpression(List<Expression> rowExprList) {
         if (rowExprList == null || rowExprList.isEmpty()) {
@@ -50,4 +50,5 @@ public class RowExpression extends PrimaryExpression {
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
 }

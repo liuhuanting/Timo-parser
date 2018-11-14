@@ -25,6 +25,7 @@ public abstract class AbstractExpression implements Expression {
     private boolean cacheEvalRst = true;
     private boolean evaluated;
     private Object evaluationCache;
+    protected String originSQL;
 
     @Override
     public Expression setCacheEvalRst(boolean cacheEvalRst) {
@@ -45,6 +46,15 @@ public abstract class AbstractExpression implements Expression {
         return evaluationInternal(parameters);
     }
 
-    protected abstract Object evaluationInternal(Map<? extends Object, ? extends Object> parameters);
+    protected abstract Object evaluationInternal(
+            Map<? extends Object, ? extends Object> parameters);
 
+    @Override
+    public String originSQLStr() {
+        return originSQL;
+    }
+
+    public void setOriginSQL(String originSQL) {
+        this.originSQL = originSQL;
+    }
 }

@@ -18,9 +18,9 @@ package fm.liu.timo.parser.recognizer.mysql.syntax;
 
 import java.sql.SQLSyntaxErrorException;
 
-import junit.framework.Assert;
 import fm.liu.timo.parser.ast.stmt.dml.DMLUpdateStatement;
 import fm.liu.timo.parser.recognizer.mysql.lexer.MySQLLexer;
+import junit.framework.Assert;
 
 /**
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
@@ -52,13 +52,12 @@ public class MySQLDMLUpdateParserTest extends AbstractSyntaxTest {
         output = output2MySQL(update, sql);
         Assert.assertEquals("UPDATE IGNORE t1 SET col2 = DEFAULT ORDER BY t1.col2", output);
 
-        sql = "upDate   (test.t1) SET col2=DefaulT order bY t1.col2 limit 2 offset 1";
+        sql = "upDate   (test.t1) SET col2=DefaulT order bY t1.col2 limit 2";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLUpdateParser(lexer, new MySQLExprParser(lexer));
         update = parser.update();
         output = output2MySQL(update, sql);
-        Assert.assertEquals("UPDATE test.t1 SET col2 = DEFAULT ORDER BY t1.col2 LIMIT 1 , 2",
-                output);
+        Assert.assertEquals("UPDATE test.t1 SET col2 = DEFAULT ORDER BY t1.col2 LIMIT 2", output);
 
         sql = "upDate LOW_PRIORITY  t1, test.t2 SET col2=DefaulT , col2='123''4'";
         lexer = new MySQLLexer(sql);

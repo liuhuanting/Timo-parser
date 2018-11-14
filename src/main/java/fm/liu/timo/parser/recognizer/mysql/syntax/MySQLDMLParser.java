@@ -16,7 +16,20 @@
  */
 package fm.liu.timo.parser.recognizer.mysql.syntax;
 
-import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.*;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.IDENTIFIER;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_AS;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_BY;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_FOR;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_GROUP;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_JOIN;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_ORDER;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_OUTER;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_UNION;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_WITH;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.LITERAL_CHARS;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.PUNC_COMMA;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.PUNC_LEFT_PAREN;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.PUNC_RIGHT_PAREN;
 
 import java.sql.SQLSyntaxErrorException;
 import java.util.ArrayList;
@@ -69,6 +82,7 @@ public abstract class MySQLDMLParser extends MySQLParser {
         match(KW_BY);
         Expression expr = exprParser.expression();
         SortOrder order = SortOrder.ASC;
+        boolean withRollUp = false;
         GroupBy groupBy;
         switch (lexer.token()) {
             case KW_DESC:
@@ -115,6 +129,7 @@ public abstract class MySQLDMLParser extends MySQLParser {
      * 
      * @return null if there is no order by
      */
+    @SuppressWarnings("incomplete-switch")
     protected OrderBy orderBy() throws SQLSyntaxErrorException {
         if (lexer.token() != KW_ORDER) {
             return null;
@@ -147,8 +162,6 @@ public abstract class MySQLDMLParser extends MySQLParser {
                     order = SortOrder.DESC;
                 case KW_ASC:
                     lexer.nextToken();
-                default:
-                    break;
             }
             orderBy.addOrderByItem(expr, order);
         }
@@ -189,12 +202,17 @@ public abstract class MySQLDMLParser extends MySQLParser {
      * @return empty list if emtpy id list
      */
     protected List<String> idNameList() throws SQLSyntaxErrorException {
-        if (lexer.token() != IDENTIFIER) {
-            match(PUNC_RIGHT_PAREN);
-            return Collections.emptyList();
-        }
+        // if (lexer.token() != IDENTIFIER) {
+        // lexer.nextToken();
+        // match(PUNC_RIGHT_PAREN);
+        // return Collections.emptyList();
+        // }
         List<String> list;
         String str = lexer.stringValue();
+        if (lexer.token() == PUNC_RIGHT_PAREN) {
+            lexer.nextToken();
+            return Collections.emptyList();
+        }
         if (lexer.nextToken() == PUNC_COMMA) {
             list = new LinkedList<String>();
             list.add(str);
@@ -219,7 +237,8 @@ public abstract class MySQLDMLParser extends MySQLParser {
         return buildTableReferences(ref);
     }
 
-    private TableReferences buildTableReferences(TableReference ref) throws SQLSyntaxErrorException {
+    private TableReferences buildTableReferences(TableReference ref)
+            throws SQLSyntaxErrorException {
         List<TableReference> list;
         if (lexer.token() == PUNC_COMMA) {
             list = new LinkedList<TableReference>();
@@ -359,11 +378,51 @@ public abstract class MySQLDMLParser extends MySQLParser {
                     return new SubqueryFactor((QueryExpression) ref, alias);
                 }
                 return (TableReferences) ref;
-            case IDENTIFIER:
+            case IDENTIFIER: {
                 Identifier table = identifier();
+                List<Identifier> partition = null;
+                if (lexer.token() == MySQLToken.KW_PARTITION) {
+                    partition = new ArrayList<>();
+                    lexer.nextToken();
+                    match(MySQLToken.PUNC_LEFT_PAREN);
+                    partition.add(identifier());
+                    while (lexer.token() != MySQLToken.EOF) {
+                        if (lexer.token() == MySQLToken.PUNC_COMMA) {
+                            lexer.nextToken();
+                            partition.add(identifier());
+                            continue;
+                        }
+                        break;
+                    }
+                    match(MySQLToken.PUNC_RIGHT_PAREN);
+                }
                 alias = as();
                 List<IndexHint> hintList = hintList();
-                return new TableRefFactor(table, alias, hintList);
+                return new TableRefFactor(table, alias, hintList, partition);
+            }
+            case QUESTION_MARK: {
+                lexer.nextToken();
+                List<Identifier> partition = null;
+                if (lexer.token() == MySQLToken.KW_PARTITION) {
+                    partition = new ArrayList<>();
+                    lexer.nextToken();
+                    match(MySQLToken.PUNC_LEFT_PAREN);
+                    partition.add(identifier());
+                    while (lexer.token() != MySQLToken.EOF) {
+                        if (lexer.token() == MySQLToken.PUNC_COMMA) {
+                            lexer.nextToken();
+                            partition.add(identifier());
+                            continue;
+                        }
+                        break;
+                    }
+                    match(MySQLToken.PUNC_RIGHT_PAREN);
+                }
+                alias = as();
+                List<IndexHint> hintList = hintList();
+                return new TableRefFactor(createParam(lexer.paramIndex()), alias, hintList,
+                        partition);
+            }
             default:
                 throw err("unexpected token for tableFactor: " + lexer.token());
         }
@@ -401,14 +460,16 @@ public abstract class MySQLDMLParser extends MySQLParser {
         switch (lexer.token()) {
             case KW_SELECT:
                 DMLSelectStatement select = selectPrimary();
-                return buildUnionSelect(select);
+                return buildUnionSelect(select, false);
             case PUNC_LEFT_PAREN:
                 lexer.nextToken();
                 ref = trsOrQuery();
                 match(PUNC_RIGHT_PAREN);
                 if (ref instanceof QueryExpression) {
                     if (ref instanceof DMLSelectStatement) {
-                        QueryExpression rst = buildUnionSelect((DMLSelectStatement) ref);
+                        DMLSelectStatement selectAst = (DMLSelectStatement) ref;
+                        selectAst.setInParen(true);
+                        QueryExpression rst = buildUnionSelect(selectAst, false);
                         if (rst != ref) {
                             return rst;
                         }
@@ -512,7 +573,8 @@ public abstract class MySQLDMLParser extends MySQLParser {
                     scope = IndexHint.IndexScope.GROUP_BY;
                     break;
                 default:
-                    throw err("must be JOIN or ORDER or GROUP for hint scope, not " + lexer.token());
+                    throw err(
+                            "must be JOIN or ORDER or GROUP for hint scope, not " + lexer.token());
             }
         }
 
@@ -524,11 +586,21 @@ public abstract class MySQLDMLParser extends MySQLParser {
     /**
      * @return argument itself if there is no union
      */
-    protected DMLQueryStatement buildUnionSelect(DMLSelectStatement select)
+    // @SuppressWarnings("incomplete-switch")
+    @SuppressWarnings("incomplete-switch")
+    protected DMLQueryStatement buildUnionSelect(DMLSelectStatement select, boolean isSubQuery)
             throws SQLSyntaxErrorException {
         if (lexer.token() != KW_UNION) {
+            if (isSubQuery) {
+                select.setInParen(true);
+            }
             return select;
         }
+        boolean hasParenByFirst = select.isInParen();
+        if (select.getOrder() != null && !hasParenByFirst) {
+            throw new IllegalArgumentException("Incorrect usage of UNION and ORDER BY");
+        }
+        boolean existOrderOrLimit = false;
         DMLSelectUnionStatement union = new DMLSelectUnionStatement(select);
         for (; lexer.token() == KW_UNION;) {
             lexer.nextToken();
@@ -539,13 +611,55 @@ public abstract class MySQLDMLParser extends MySQLParser {
                 case KW_DISTINCT:
                     lexer.nextToken();
                     break;
-                default:
-                    break;
             }
             select = selectPrimary();
+            if (existOrderOrLimit) {
+                throw new IllegalArgumentException("Incorrect usage of UNION and ORDER BY");
+            }
+            if ((select.getOrder() != null || select.getLimit() != null) && !select.isInParen()) {// 允许最后一个order by不在括号中
+                if (!existOrderOrLimit) {
+                    existOrderOrLimit = true;
+                }
+            }
+            if ((select.getOutermostOrderBy() != null || select.getOutermostLimit() != null)
+                    && select.isInParen()) {
+                if (!existOrderOrLimit) {
+                    existOrderOrLimit = true;
+                }
+            }
             union.addSelect(select, isAll);
         }
-        union.setOrderBy(orderBy()).setLimit(limit());
+        if (existOrderOrLimit) {
+            int index = union.getSelectStmtList().size() - 1;
+            DMLSelectStatement last = union.getSelectStmtList().get(index);
+            if (last.isInParen()) {
+                union.setOrderBy(last.getOutermostOrderBy());
+                union.setLimit(last.getOutermostLimit());
+                DMLSelectStatement newStmt = new DMLSelectStatement(last.getOption(),
+                        last.getSelectExprList(), last.getTables(), last.getWhere(),
+                        last.getGroup(), last.getHaving(), last.getOrder(), last.getLimit());
+                newStmt.setInParen(true);
+                union.getSelectStmtList().set(index, newStmt);
+            } else {
+                union.setOrderBy(last.getOrder());
+                union.setLimit(last.getLimit());
+                DMLSelectStatement newStmt = new DMLSelectStatement(last.getOption(),
+                        last.getSelectExprList(), last.getTables(), last.getWhere(),
+                        last.getGroup(), last.getHaving(), null, null);
+                newStmt.setInParen(false);
+                union.getSelectStmtList().set(index, newStmt);
+            }
+        } else {
+            if (lexer.token() == MySQLToken.KW_ORDER) {
+                union.setOrderBy(orderBy());
+            }
+            if (lexer.token() == MySQLToken.KW_LIMIT) {
+                union.setLimit(limit());
+            }
+        }
+        if (isSubQuery) {
+            union.setInParen(true);
+        }
         return union;
     }
 
@@ -557,6 +671,13 @@ public abstract class MySQLDMLParser extends MySQLParser {
                 lexer.nextToken();
                 DMLSelectStatement select = selectPrimary();
                 match(PUNC_RIGHT_PAREN);
+                select.setInParen(true);
+                if (lexer.token() == MySQLToken.KW_ORDER) {
+                    select.setOutermostOrderBy(orderBy());
+                }
+                if (lexer.token() == MySQLToken.KW_LIMIT) {
+                    select.setOutermostLimit(limit());
+                }
                 return select;
             default:
                 throw err("unexpected token: " + lexer.token());

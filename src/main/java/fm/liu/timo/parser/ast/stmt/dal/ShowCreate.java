@@ -25,7 +25,7 @@ import fm.liu.timo.parser.visitor.Visitor;
 public class ShowCreate extends DALShowStatement {
     /** enum name must equals to real sql string */
     public static enum Type {
-        DATABASE, EVENT, FUNCTION, PROCEDURE, TABLE, TRIGGER, VIEW
+        DATABASE, EVENT, FUNCTION, PROCEDURE, TABLE, TRIGGER, VIEW, USER
     }
 
     private final Type type;

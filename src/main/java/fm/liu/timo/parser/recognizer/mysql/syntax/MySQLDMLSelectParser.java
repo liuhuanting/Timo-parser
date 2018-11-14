@@ -16,7 +16,15 @@
  */
 package fm.liu.timo.parser.recognizer.mysql.syntax;
 
-import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.*;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_DUAL;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_FROM;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_HAVING;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_IN;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_SELECT;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_UPDATE;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_WHERE;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.LITERAL_CHARS;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.PUNC_COMMA;
 
 import java.sql.SQLSyntaxErrorException;
 import java.util.ArrayList;
@@ -25,7 +33,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import fm.liu.timo.parser.ast.expression.AbstractExpression;
 import fm.liu.timo.parser.ast.expression.Expression;
+import fm.liu.timo.parser.ast.expression.primary.Identifier;
+import fm.liu.timo.parser.ast.expression.primary.literal.LiteralString;
 import fm.liu.timo.parser.ast.fragment.GroupBy;
 import fm.liu.timo.parser.ast.fragment.Limit;
 import fm.liu.timo.parser.ast.fragment.OrderBy;
@@ -54,6 +65,7 @@ public class MySQLDMLSelectParser extends MySQLDMLParser {
 
     private static final Map<String, SpecialIdentifier> specialIdentifiers =
             new HashMap<String, SpecialIdentifier>();
+
     static {
         specialIdentifiers.put("SQL_BUFFER_RESULT", SpecialIdentifier.SQL_BUFFER_RESULT);
         specialIdentifiers.put("SQL_CACHE", SpecialIdentifier.SQL_CACHE);
@@ -109,16 +121,45 @@ public class MySQLDMLSelectParser extends MySQLDMLParser {
                                 option.queryCache =
                                         DMLSelectStatement.QueryCacheStrategy.SQL_NO_CACHE;
                                 break outer;
+                            default:
+                                option.unknownOption = true;
+                                break outer;
                         }
                     }
                 default:
+                    option.unknownOption = true;
                     return option;
             }
         }
     }
 
     private List<Pair<Expression, String>> selectExprList() throws SQLSyntaxErrorException {
+        int s = exprParser.lexer.getLastIndex();
         Expression expr = exprParser.expression();
+        int e = exprParser.lexer.getLastIndex();
+        if (expr instanceof Identifier) {
+            switch (((Identifier) expr).getIdText().toUpperCase()) {
+                case "TIME":
+                case "DATE":
+                case "TIMESTAMP":
+                    if (lexer.token() == LITERAL_CHARS) {
+                        ArrayList<Byte> bytes = new ArrayList<>();
+                        do {
+                            lexer.appendStringContent(bytes);
+                        } while (lexer.nextToken() == MySQLToken.LITERAL_CHARS);
+                        byte[] data = new byte[bytes.size()];
+                        for (int i = 0, size = bytes.size(); i < size; i++) {
+                            data[i] = bytes.get(i);
+                        }
+                        expr = new LiteralString(null, data, false).setCacheEvalRst(cacheEvalRst);
+                    }
+                    break;
+            }
+        } else {
+            if (e - s > 0 && expr instanceof AbstractExpression) {
+                ((AbstractExpression) expr).setOriginSQL(exprParser.lexer.getSQL(s + 1, e));
+            }
+        }
         String alias = as();
         List<Pair<Expression, String>> list;
         if (lexer.token() == PUNC_COMMA) {
@@ -131,12 +172,39 @@ public class MySQLDMLSelectParser extends MySQLDMLParser {
         }
         for (; lexer.token() == PUNC_COMMA; list.add(new Pair<Expression, String>(expr, alias))) {
             lexer.nextToken();
+            s = exprParser.lexer.getLastIndex();
             expr = exprParser.expression();
+            e = exprParser.lexer.getLastIndex();
+            if (expr instanceof Identifier) {
+                switch (((Identifier) expr).getIdText().toUpperCase()) {
+                    case "TIME":
+                    case "DATE":
+                    case "TIMESTAMP":
+                        if (lexer.token() == LITERAL_CHARS) {
+                            ArrayList<Byte> bytes = new ArrayList<>();
+                            do {
+                                lexer.appendStringContent(bytes);
+                            } while (lexer.nextToken() == MySQLToken.LITERAL_CHARS);
+                            byte[] data = new byte[bytes.size()];
+                            for (int i = 0, size = bytes.size(); i < size; i++) {
+                                data[i] = bytes.get(i);
+                            }
+                            expr = new LiteralString(null, data, false)
+                                    .setCacheEvalRst(cacheEvalRst);
+                        }
+                        break;
+                }
+            } else {
+                if (e - s > 0 && expr instanceof AbstractExpression) {
+                    ((AbstractExpression) expr).setOriginSQL(exprParser.lexer.getSQL(s, e));
+                }
+            }
             alias = as();
         }
         return list;
     }
 
+    @SuppressWarnings("incomplete-switch")
     @Override
     public DMLSelectStatement select() throws SQLSyntaxErrorException {
         match(KW_SELECT);
@@ -172,6 +240,9 @@ public class MySQLDMLSelectParser extends MySQLDMLParser {
                 having = exprParser.expression();
             }
             order = orderBy();
+            if (group != null && group.isWithRollup() && order != null) {
+                throw new SQLSyntaxErrorException("Incorrect usage of CUBE/ROLLUP and order by");
+            }
         }
         limit = limit();
         if (!dual) {
@@ -188,10 +259,13 @@ public class MySQLDMLSelectParser extends MySQLDMLParser {
                     matchIdentifier("MODE");
                     option.lockMode = DMLSelectStatement.LockMode.LOCK_IN_SHARE_MODE;
                     break;
-                default:
+                case KW_PROCEDURE:
+                case KW_INTO:
+                    // throw new ForbiddenFunctionException("PROCEDURE ANALYSE");
                     break;
             }
         }
+        option.version = lexer.getVersion();
         return new DMLSelectStatement(option, exprList, tables, where, group, having, order, limit);
     }
 
@@ -201,9 +275,9 @@ public class MySQLDMLSelectParser extends MySQLDMLParser {
      * 
      * @return {@link DMLSelectStatement} or {@link DMLSelectUnionStatement}
      */
-    public DMLQueryStatement selectUnion() throws SQLSyntaxErrorException {
+    public DMLQueryStatement selectUnion(boolean isSubQuery) throws SQLSyntaxErrorException {
         DMLSelectStatement select = selectPrimary();
-        DMLQueryStatement query = buildUnionSelect(select);
+        DMLQueryStatement query = buildUnionSelect(select, isSubQuery);
         return query;
     }
 

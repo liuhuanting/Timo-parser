@@ -27,8 +27,8 @@ import fm.liu.timo.parser.util.Pair;
 /**
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
-public abstract class ArithmeticBinaryOperatorExpression extends BinaryOperatorExpression implements
-        BinaryOperandCalculator {
+public abstract class ArithmeticBinaryOperatorExpression extends BinaryOperatorExpression
+        implements BinaryOperandCalculator {
     protected ArithmeticBinaryOperatorExpression(Expression leftOprand, Expression rightOprand,
             int precedence) {
         super(leftOprand, rightOprand, precedence, true);

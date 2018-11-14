@@ -214,8 +214,8 @@ public class MySQLFunctionManager {
         _ORDINARY, CAST, POSITION, SUBSTRING, TRIM, AVG, COUNT, GROUP_CONCAT, MAX, MIN, SUM, ROW, CHAR, CONVERT, EXTRACT, TIMESTAMPADD, TIMESTAMPDIFF, GET_FORMAT
     }
 
-    public static final MySQLFunctionManager INSTANCE_MYSQL_DEFAULT = new MySQLFunctionManager(
-            false);
+    public static final MySQLFunctionManager INSTANCE_MYSQL_DEFAULT =
+            new MySQLFunctionManager(false);
     private final boolean allowFuncDefChange;
 
     /** non-reserved word named special syntax function */
@@ -276,8 +276,8 @@ public class MySQLFunctionManager {
         parsingStrateg.put("MULTILINESTRINGFROMTEXT",
                 FunctionParsingStrategy.MULTILINESTRINGFROMTEXT);
         parsingStrateg.put("MLINEFROMWKB", FunctionParsingStrategy.MLINEFROMWKB);
-        parsingStrateg
-                .put("MULTILINESTRINGFROMWKB", FunctionParsingStrategy.MULTILINESTRINGFROMWKB);
+        parsingStrateg.put("MULTILINESTRINGFROMWKB",
+                FunctionParsingStrategy.MULTILINESTRINGFROMWKB);
         parsingStrateg.put("MPOINTFROMTEXT", FunctionParsingStrategy.MPOINTFROMTEXT);
         parsingStrateg.put("MULTIPOINTFROMTEXT", FunctionParsingStrategy.MULTIPOINTFROMTEXT);
         parsingStrateg.put("MPOINTFROMWKB", FunctionParsingStrategy.MPOINTFROMWKB);
@@ -548,7 +548,8 @@ public class MySQLFunctionManager {
      *        as predefined function of MySQL 5.5
      * @throws IllegalArgumentException
      */
-    public synchronized void addExtendFunction(Map<String, FunctionExpression> extFuncPrototypeMap) {
+    public synchronized void addExtendFunction(
+            Map<String, FunctionExpression> extFuncPrototypeMap) {
         if (extFuncPrototypeMap == null || extFuncPrototypeMap.isEmpty()) {
             return;
         }
@@ -564,8 +565,8 @@ public class MySQLFunctionManager {
                 continue;
             String funcNameUp = funcName.toUpperCase();
             if (functionPrototype.containsKey(funcNameUp)) {
-                throw new IllegalArgumentException("ext-function '" + funcName
-                        + "' is MySQL's predefined function!");
+                throw new IllegalArgumentException(
+                        "ext-function '" + funcName + "' is MySQL's predefined function!");
             }
             FunctionExpression func = en.getValue();
             if (func == null) {

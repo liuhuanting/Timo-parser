@@ -23,8 +23,6 @@ import org.junit.Assert;
 import fm.liu.timo.parser.ast.stmt.dml.DMLInsertStatement;
 import fm.liu.timo.parser.recognizer.mysql.MySQLToken;
 import fm.liu.timo.parser.recognizer.mysql.lexer.MySQLLexer;
-import fm.liu.timo.parser.recognizer.mysql.syntax.MySQLDMLInsertParser;
-import fm.liu.timo.parser.recognizer.mysql.syntax.MySQLExprParser;
 
 /**
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
@@ -86,8 +84,7 @@ public class MySQLDMLInsertParserTest extends AbstractSyntaxTest {
         output = output2MySQL(insert, sql);
         Assert.assertEquals("INSERT DELAYED INTO t1 SELECT id FROM t1", output);
 
-        sql =
-                "insErt LOW_PRIORITY t1 (select id from t1) oN dupLicatE key UPDATE ex.col1=?, col2=12";
+        sql = "insErt LOW_PRIORITY t1 (select id from t1) oN dupLicatE key UPDATE ex.col1=?, col2=12";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLInsertParser(lexer, new MySQLExprParser(lexer));
         insert = parser.insert();
@@ -106,8 +103,7 @@ public class MySQLDMLInsertParserTest extends AbstractSyntaxTest {
         Assert.assertEquals("INSERT LOW_PRIORITY INTO t1 (t1.col1) VALUES (123), ('12\\'34')",
                 output);
 
-        sql =
-                "insErt LOW_PRIORITY t1 (col1, t1.col2) VALUE (123,'123\\'4') oN dupLicatE key UPDATE ex.col1=?";
+        sql = "insErt LOW_PRIORITY t1 (col1, t1.col2) VALUE (123,'123\\'4') oN dupLicatE key UPDATE ex.col1=?";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLInsertParser(lexer, new MySQLExprParser(lexer));
         insert = parser.insert();
@@ -117,8 +113,7 @@ public class MySQLDMLInsertParserTest extends AbstractSyntaxTest {
                 "INSERT LOW_PRIORITY INTO t1 (col1, t1.col2) VALUES (123, '123\\'4') ON DUPLICATE KEY UPDATE ex.col1 = ?",
                 output);
 
-        sql =
-                "insErt LOW_PRIORITY t1 (col1, t1.col2) select id from t3 oN dupLicatE key UPDATE ex.col1=?";
+        sql = "insErt LOW_PRIORITY t1 (col1, t1.col2) select id from t3 oN dupLicatE key UPDATE ex.col1=?";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLInsertParser(lexer, new MySQLExprParser(lexer));
         insert = parser.insert();

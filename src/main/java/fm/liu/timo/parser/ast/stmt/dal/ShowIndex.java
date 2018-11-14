@@ -16,6 +16,7 @@
  */
 package fm.liu.timo.parser.ast.stmt.dal;
 
+import fm.liu.timo.parser.ast.expression.Expression;
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
 import fm.liu.timo.parser.visitor.Visitor;
 
@@ -29,16 +30,15 @@ public class ShowIndex extends DALShowStatement {
 
     private final Type type;
     private final Identifier table;
+    private final Expression where;
 
-    public ShowIndex(Type type, Identifier table, Identifier database) {
+    public ShowIndex(Type type, Identifier table, Identifier database, Expression where) {
         this.table = table;
-        this.table.setParent(database);
+        if (database != null) {
+            this.table.setParent(database);
+        }
         this.type = type;
-    }
-
-    public ShowIndex(Type type, Identifier table) {
-        this.table = table;
-        this.type = type;
+        this.where = where;
     }
 
     public Type getType() {
@@ -47,6 +47,10 @@ public class ShowIndex extends DALShowStatement {
 
     public Identifier getTable() {
         return table;
+    }
+
+    public Expression getWhere() {
+        return where;
     }
 
     @Override

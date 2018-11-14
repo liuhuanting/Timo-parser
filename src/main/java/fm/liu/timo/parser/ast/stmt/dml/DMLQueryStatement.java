@@ -39,4 +39,19 @@ public abstract class DMLQueryStatement extends DMLStatement implements QueryExp
     public Object evaluation(Map<? extends Object, ? extends Object> parameters) {
         return UNEVALUATABLE;
     }
+
+    private boolean isInParen = false;
+
+    public boolean isInParen() {
+        return isInParen;
+    }
+
+    public void setInParen(boolean isInParen) {
+        this.isInParen = isInParen;
+    }
+
+    @Override
+    public String originSQLStr() {
+        return null;
+    }
 }

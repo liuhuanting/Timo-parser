@@ -24,12 +24,17 @@ import fm.liu.timo.parser.visitor.Visitor;
  */
 public class SysVarPrimary extends VariableExpression {
     private final VariableScope scope;
+    /**
+     * 作用域 字符串 可能为null
+     */
+    private final String scopeStr;
     /** excluding starting "@@", '`' might be included */
     private final String varText;
     private final String varTextUp;
 
-    public SysVarPrimary(VariableScope scope, String varText, String varTextUp) {
+    public SysVarPrimary(VariableScope scope, String scopeStr, String varText, String varTextUp) {
         this.scope = scope;
+        this.scopeStr = scopeStr;
         this.varText = varText;
         this.varTextUp = varTextUp;
     }
@@ -49,8 +54,13 @@ public class SysVarPrimary extends VariableExpression {
         return varText;
     }
 
+    public String getScopeStr() {
+        return scopeStr;
+    }
+
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
 }

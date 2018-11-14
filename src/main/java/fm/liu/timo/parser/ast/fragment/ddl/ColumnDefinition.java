@@ -36,6 +36,10 @@ public class ColumnDefinition implements ASTNode {
         FIXED, DYNAMIC, DEFAULT,
     }
 
+    public static enum Storage {
+        DISK, MEMORY, DEFAULT
+    }
+
     private final DataType dataType;
     private final boolean notNull;
     private final Expression defaultVal;
@@ -43,6 +47,11 @@ public class ColumnDefinition implements ASTNode {
     private final SpecialIndex specialIndex;
     private final LiteralString comment;
     private final ColumnFormat columnFormat;
+    private final Expression onUpdate;
+    private final Storage storage;
+    private final Boolean virtual;
+    private final Boolean stored;
+    private final Expression as;
 
     /**
      * @param dataType
@@ -55,7 +64,8 @@ public class ColumnDefinition implements ASTNode {
      */
     public ColumnDefinition(DataType dataType, boolean notNull, Expression defaultVal,
             boolean autoIncrement, SpecialIndex specialIndex, LiteralString comment,
-            ColumnFormat columnFormat) {
+            ColumnFormat columnFormat, Expression onUpdate, Storage storage, Boolean virtual,
+            Boolean stored, Expression as) {
         if (dataType == null)
             throw new IllegalArgumentException("data type is null");
         this.dataType = dataType;
@@ -65,6 +75,11 @@ public class ColumnDefinition implements ASTNode {
         this.specialIndex = specialIndex;
         this.comment = comment;
         this.columnFormat = columnFormat;
+        this.onUpdate = onUpdate;
+        this.storage = storage;
+        this.virtual = virtual;
+        this.stored = stored;
+        this.as = as;
     }
 
     public DataType getDataType() {
@@ -95,9 +110,20 @@ public class ColumnDefinition implements ASTNode {
         return columnFormat;
     }
 
+    public Expression getOnUpdate() {
+        return onUpdate;
+    }
+
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
+    }
+
+    /** 
+     * @return storage 
+     */
+    public Storage getStorage() {
+        return storage;
     }
 
 }

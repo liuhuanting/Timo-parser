@@ -40,6 +40,10 @@ public class TableOptions implements ASTNode {
         DEFAULT, DYNAMIC, FIXED, COMPRESSED, REDUNDANT, COMPACT
     }
 
+    public static enum Compression {
+        ZLIB, LZ4, NONE
+    }
+
     private Identifier engine;
     private Expression autoIncrement;
     private Expression avgRowLength;
@@ -59,6 +63,8 @@ public class TableOptions implements ASTNode {
     private LiteralString password;
     private RowFormat rowFormat;
     private List<Identifier> union;
+    private Compression compression;
+    private Boolean encryption;
 
     // table_option:
     // ENGINE [=] engine_name
@@ -237,5 +243,33 @@ public class TableOptions implements ASTNode {
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
+    }
+
+    /**
+     * @return the compression
+     */
+    public Compression getCompression() {
+        return compression;
+    }
+
+    /**
+     * @param compression the compression to set
+     */
+    public void setCompression(Compression compression) {
+        this.compression = compression;
+    }
+
+    /**
+     * @return the encryption
+     */
+    public Boolean getEncryption() {
+        return encryption;
+    }
+
+    /**
+     * @param encryption the encryption to set
+     */
+    public void setEncryption(Boolean encryption) {
+        this.encryption = encryption;
     }
 }

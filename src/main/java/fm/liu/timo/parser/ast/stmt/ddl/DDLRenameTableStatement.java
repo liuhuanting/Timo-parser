@@ -22,6 +22,7 @@ import java.util.List;
 
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
 import fm.liu.timo.parser.util.Pair;
+import fm.liu.timo.parser.visitor.OutputVisitor;
 import fm.liu.timo.parser.visitor.Visitor;
 
 /**
@@ -56,4 +57,10 @@ public class DDLRenameTableStatement implements DDLStatement {
         visitor.visit(this);
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        accept(new OutputVisitor(sb));
+        return sb.toString();
+    }
 }

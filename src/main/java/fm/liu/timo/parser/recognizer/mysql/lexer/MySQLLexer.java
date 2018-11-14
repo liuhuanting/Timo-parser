@@ -19,6 +19,8 @@ package fm.liu.timo.parser.recognizer.mysql.lexer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.SQLSyntaxErrorException;
+import java.util.Arrays;
+import java.util.List;
 
 import fm.liu.timo.parser.recognizer.mysql.MySQLToken;
 import fm.liu.timo.parser.util.CharTypes;
@@ -46,14 +48,14 @@ public class MySQLLexer {
      */
     private final static byte EOI = 0x1A;
 
-    protected final char[] sql;
+    protected final byte[] sql;
     /** always be {@link #sql}.length - 1 */
     protected final int eofIndex;
 
     /** current index of {@link #sql} */
     protected int curIndex = -1;
     /** always be {@link #sql}[{@link #curIndex}] */
-    protected char ch;
+    protected byte ch;
 
     // /** current token, set by {@link #nextToken()} */
     // private int tokenPos = 0;
@@ -65,27 +67,36 @@ public class MySQLLexer {
     private int paramIndex = 0;
 
     /** A character buffer for literals. */
-    protected final static ThreadLocal<char[]> sbufRef = new ThreadLocal<char[]>();
-    protected char[] sbuf;
+    protected final static ThreadLocal<byte[]> sbufRef = new ThreadLocal<byte[]>();
+    protected byte[] sbuf;
 
-    private String stringValue;
+    private byte[] stringValue;
     /** make sense only for {@link MySQLToken#IDENTIFIER} */
-    private String stringValueUppercase;
+    private byte[] stringValueUppercase;
+
+    /**
+     * 语句中指定的版本
+     */
+    protected int version;
+
+    public int getVersion() {
+        return version;
+    }
 
     /**
      * update {@link MySQLLexer#stringValue} and {@link MySQLLexer#stringValueUppercase}. It is
      * possible that {@link #sbuf} be changed
      */
-    protected void updateStringValue(final char[] src, final int srcOffset, final int len) {
+    protected void updateStringValue(final byte[] src, final int srcOffset, final int len) {
         // QS_TODO [performance enhance]: use String constant for special
         // identifier, so that parser can use '==' rather than 'equals'
-        stringValue = new String(src, srcOffset, len);
+        stringValue = Arrays.copyOfRange(src, srcOffset, srcOffset + len);
         final int end = srcOffset + len;
         boolean lowerCase = false;
         int srcIndex = srcOffset;
         // int hash = 0;
         for (; srcIndex < end; ++srcIndex) {
-            char c = src[srcIndex];
+            byte c = src[srcIndex];
             if (c >= 'a' && c <= 'z') {
                 lowerCase = true;
                 if (srcIndex > srcOffset) {
@@ -97,30 +108,30 @@ public class MySQLLexer {
         }
         if (lowerCase) {
             for (int destIndex = srcIndex - srcOffset; destIndex < len; ++destIndex) {
-                char c = src[srcIndex++];
+                byte c = src[srcIndex++];
                 // hash = 31 * hash + c;
                 if (c >= 'a' && c <= 'z') {
-                    sbuf[destIndex] = (char) (c - 32);
+                    sbuf[destIndex] = (byte) (c - 32);
                     // hash -= 32;
                 } else {
                     sbuf[destIndex] = c;
                 }
             }
-            stringValueUppercase = new String(sbuf, 0, len);
+            stringValueUppercase = Arrays.copyOfRange(sbuf, 0, len);
         } else {
-            stringValueUppercase = new String(src, srcOffset, len);
+            stringValueUppercase = Arrays.copyOfRange(src, srcOffset, srcOffset + len);
         }
     }
 
-    public MySQLLexer(char[] sql) throws SQLSyntaxErrorException {
+    public MySQLLexer(byte[] sql) throws SQLSyntaxErrorException {
         if ((this.sbuf = sbufRef.get()) == null) {
-            this.sbuf = new char[1024];
+            this.sbuf = new byte[1024];
             sbufRef.set(this.sbuf);
         }
         if (CharTypes.isWhitespace(sql[sql.length - 1])) {
             this.sql = sql;
         } else {
-            this.sql = new char[sql.length + 1];
+            this.sql = new byte[sql.length + 1];
             System.arraycopy(sql, 0, this.sql, 0, sql.length);
         }
         this.eofIndex = this.sql.length - 1;
@@ -130,15 +141,16 @@ public class MySQLLexer {
     }
 
     public MySQLLexer(String sql) throws SQLSyntaxErrorException {
-        this(fromSQL2Chars(sql));
+        this(fromSQL2Bytes(sql));
     }
 
-    private static char[] fromSQL2Chars(String sql) {
+    private static byte[] fromSQL2Bytes(String sql) {
         if (CharTypes.isWhitespace(sql.charAt(sql.length() - 1))) {
-            return sql.toCharArray();
+            return sql.getBytes();
         }
-        char[] chars = new char[sql.length() + 1];
-        sql.getChars(0, sql.length(), chars, 0);
+        byte[] bytes = sql.getBytes();
+        byte[] chars = new byte[bytes.length + 1];
+        System.arraycopy(bytes, 0, chars, 0, bytes.length);
         chars[chars.length - 1] = ' ';
         return chars;
     }
@@ -170,8 +182,14 @@ public class MySQLLexer {
         return this.curIndex;
     }
 
-    public final char[] getSQL() {
+    public final byte[] getSQL() {
         return sql;
+    }
+
+    public String getSQL(int start, int end) {
+        byte[] c = new byte[end - start];
+        System.arraycopy(sql, start, c, 0, c.length);
+        return new String(c);
     }
 
     public int getOffsetCache() {
@@ -189,14 +207,14 @@ public class MySQLLexer {
         return paramIndex;
     }
 
-    protected final char scanChar() {
+    protected final byte scanChar() {
         return ch = sql[++curIndex];
     }
 
     /**
      * @param skip if 1, then equals to {@link #scanChar()}
      */
-    protected final char scanChar(int skip) {
+    protected final byte scanChar(int skip) {
         return ch = sql[curIndex += skip];
     }
 
@@ -448,6 +466,7 @@ public class MySQLLexer {
     }
 
     public MySQLToken nextToken() throws SQLSyntaxErrorException {
+        lastIndex = curIndex;
         if (tokenCache2 != null) {
             tokenCache2 = null;
             return tokenCache;
@@ -468,6 +487,8 @@ public class MySQLLexer {
                 || MySQLToken.PUNC_C_STYLE_COMMENT_END == t);
         return t;
     }
+
+    protected int lastIndex;
 
     protected boolean inCStyleComment;
     protected boolean inCStyleCommentIgnore;
@@ -534,7 +555,7 @@ public class MySQLLexer {
                 }
         }
 
-        stringValue = new String(sql, offsetCache, sizeCache);
+        stringValue = Arrays.copyOfRange(sql, offsetCache, offsetCache + sizeCache);
         token = MySQLToken.USR_VAR;
     }
 
@@ -581,27 +602,27 @@ public class MySQLLexer {
             loop: while (true) {
                 switch (scanChar()) {
                     case '\'':
-                        putChar('\\', size++);
-                        putChar('\'', size++);
+                        pubByte((byte) '\\', size++);
+                        pubByte((byte) '\'', size++);
                         break;
                     case '\\':
-                        putChar('\\', size++);
-                        putChar(scanChar(), size++);
+                        pubByte((byte) '\\', size++);
+                        pubByte(scanChar(), size++);
                         continue;
                     case '"':
                         if (sql[curIndex + 1] == '"') {
-                            putChar('"', size++);
+                            pubByte((byte) '"', size++);
                             scanChar();
                             continue;
                         }
-                        putChar('\'', size++);
+                        pubByte((byte) '\'', size++);
                         scanChar();
                         break loop;
                     default:
                         if (eof()) {
                             throw err("unclosed string");
                         }
-                        putChar(ch, size++);
+                        pubByte(ch, size++);
                         continue;
                 }
             }
@@ -609,39 +630,39 @@ public class MySQLLexer {
             loop: while (true) {
                 switch (scanChar()) {
                     case '\\':
-                        putChar('\\', size++);
-                        putChar(scanChar(), size++);
+                        pubByte((byte) '\\', size++);
+                        pubByte(scanChar(), size++);
                         continue;
                     case '\'':
                         if (sql[curIndex + 1] == '\'') {
-                            putChar('\\', size++);
-                            putChar(scanChar(), size++);
+                            pubByte((byte) '\\', size++);
+                            pubByte(scanChar(), size++);
                             continue;
                         }
-                        putChar('\'', size++);
+                        pubByte((byte) '\'', size++);
                         scanChar();
                         break loop;
                     default:
                         if (eof()) {
                             throw err("unclosed string");
                         }
-                        putChar(ch, size++);
+                        pubByte(ch, size++);
                         continue;
                 }
             }
         }
 
         sizeCache = size;
-        stringValue = new String(sbuf, 0, size);
+        stringValue = Arrays.copyOfRange(sbuf, 0, size);
         token = MySQLToken.LITERAL_CHARS;
     }
 
     /**
      * Append a character to sbuf.
      */
-    protected final void putChar(char ch, int index) {
+    protected final void pubByte(byte ch, int index) {
         if (index >= sbuf.length) {
-            char[] newsbuf = new char[sbuf.length * 2];
+            byte[] newsbuf = new byte[sbuf.length * 2];
             System.arraycopy(sbuf, 0, newsbuf, 0, sbuf.length);
             sbuf = newsbuf;
         }
@@ -695,7 +716,7 @@ public class MySQLLexer {
         }
 
         token = MySQLToken.LITERAL_BIT;
-        stringValue = new String(sql, offsetCache, sizeCache);
+        stringValue = Arrays.copyOfRange(sql, offsetCache, offsetCache + sizeCache);
     }
 
     /**
@@ -973,6 +994,7 @@ public class MySQLLexer {
                                 version *= 10;
                                 version += sql[curIndex + 4] - '0';
                                 scanChar(5);
+                                this.version = version;
                                 if (version > C_STYLE_COMMENT_VERSION) {
                                     inCStyleCommentIgnore = true;
                                 }
@@ -1034,7 +1056,8 @@ public class MySQLLexer {
         sb.append(getClass().getSimpleName()).append('@').append(hashCode()).append('{');
         String sqlLeft = new String(sql, curIndex, sql.length - curIndex);
         sb.append("curIndex=").append(curIndex).append(", ch=").append(ch).append(", token=")
-                .append(token).append(", sqlLeft=").append(sqlLeft).append(", sql=").append(sql);
+                .append(token).append(", sqlLeft=").append(sqlLeft).append(", sql=")
+                .append(new String(sql));
         sb.append('}');
         return sb.toString();
     }
@@ -1045,10 +1068,8 @@ public class MySQLLexer {
     public Number integerValue() {
         // 2147483647
         // 9223372036854775807
-        if (sizeCache < 10
-                || sizeCache == 10
-                && (sql[offsetCache] < '2' || sql[offsetCache] == '2'
-                        && sql[offsetCache + 1] == '0')) {
+        if (sizeCache < 10 || sizeCache == 10 && (sql[offsetCache] < '2'
+                || sql[offsetCache] == '2' && sql[offsetCache + 1] == '0')) {
             int rst = 0;
             int end = offsetCache + sizeCache;
             for (int i = offsetCache; i < end; ++i) {
@@ -1071,14 +1092,20 @@ public class MySQLLexer {
 
     public BigDecimal decimalValue() {
         // QS_TODO [performance enhance]: prevent BigDecimal's parser
-        return new BigDecimal(sql, offsetCache, sizeCache);
+        return new BigDecimal(new String(sql, offsetCache, sizeCache));
     }
 
     /**
      * if {@link #stringValue()} returns "'abc\\'d'", then "abc\\'d" is appended
      */
-    public void appendStringContent(StringBuilder sb) {
-        sb.append(sbuf, 1, sizeCache - 2);
+    public void appendStringContent(List<Byte> bytes) {
+        for (int i = 1, size = sizeCache - 1; i < size; i++) {
+            bytes.add(sbuf[i]);
+        }
+    }
+
+    public byte[] getStringContent() {
+        return Arrays.copyOfRange(sbuf, 1, sizeCache - 1);
     }
 
     /**
@@ -1090,6 +1117,10 @@ public class MySQLLexer {
      * {@link MySQLToken#IDENTIFIER}
      */
     public final String stringValue() {
+        return new String(stringValue);
+    }
+
+    public final byte[] byteValue() {
         return stringValue;
     }
 
@@ -1097,6 +1128,11 @@ public class MySQLLexer {
      * for {@link MySQLToken#IDENTIFIER}, {@link MySQLToken#SYS_VAR}
      */
     public final String stringValueUppercase() {
-        return stringValueUppercase;
+        return new String(stringValueUppercase);
     }
+
+    public int getLastIndex() {
+        return lastIndex;
+    }
+
 }

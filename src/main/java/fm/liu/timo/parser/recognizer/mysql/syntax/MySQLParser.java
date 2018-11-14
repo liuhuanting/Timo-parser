@@ -13,7 +13,10 @@
  */
 package fm.liu.timo.parser.recognizer.mysql.syntax;
 
-import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.*;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.IDENTIFIER;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_LIMIT;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.PUNC_DOT;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.SYS_VAR;
 
 import java.sql.SQLSyntaxErrorException;
 import java.util.HashMap;
@@ -34,6 +37,7 @@ import fm.liu.timo.parser.recognizer.mysql.lexer.MySQLLexer;
  */
 public abstract class MySQLParser {
     public static final String DEFAULT_CHARSET = "utf-8";
+
     protected final MySQLLexer lexer;
 
     public MySQLParser(MySQLLexer lexer) {
@@ -51,6 +55,7 @@ public abstract class MySQLParser {
 
     private static final Map<String, SpecialIdentifier> specialIdentifiers =
             new HashMap<String, SpecialIdentifier>();
+
     static {
         specialIdentifiers.put("GLOBAL", SpecialIdentifier.GLOBAL);
         specialIdentifiers.put("SESSION", SpecialIdentifier.SESSION);
@@ -79,12 +84,15 @@ public abstract class MySQLParser {
                 id.setCacheEvalRst(cacheEvalRst);
                 lexer.nextToken();
                 break;
+            case LITERAL_NUM_MIX_DIGIT:
+            case LITERAL_NUM_PURE_DIGIT:
+                throw err("expect identifier");
             default:
                 id = new Identifier(null, lexer.stringValue(), lexer.stringValueUppercase());
                 id.setCacheEvalRst(cacheEvalRst);
                 lexer.nextToken();
                 break;
-        // throw err("expect id or * after '.'");
+            // throw err("expect id or * after '.'");
         }
         for (; lexer.token() == PUNC_DOT;) {
             switch (lexer.nextToken()) {
@@ -98,12 +106,15 @@ public abstract class MySQLParser {
                     id.setCacheEvalRst(cacheEvalRst);
                     lexer.nextToken();
                     break;
+                case LITERAL_NUM_MIX_DIGIT:
+                case LITERAL_NUM_PURE_DIGIT:
+                    throw err("expect identifier");
                 default:
                     id = new Identifier(null, lexer.stringValue(), lexer.stringValueUppercase());
                     id.setCacheEvalRst(cacheEvalRst);
                     lexer.nextToken();
                     break;
-            // throw err("expect id or * after '.'");
+                // throw err("expect id or * after '.'");
             }
         }
         return id;
@@ -115,6 +126,7 @@ public abstract class MySQLParser {
     public SysVarPrimary systemVariale() throws SQLSyntaxErrorException {
         SysVarPrimary sys;
         VariableScope scope = VariableScope.SESSION;
+        String scopeStr = null;
         String str = lexer.stringValue();
         String strUp = lexer.stringValueUppercase();
         match(SYS_VAR);
@@ -125,16 +137,17 @@ public abstract class MySQLParser {
                     scope = VariableScope.GLOBAL;
                 case SESSION:
                 case LOCAL:
+                    scopeStr = str;
                     match(PUNC_DOT);
                     str = lexer.stringValue();
                     strUp = lexer.stringValueUppercase();
                     match(IDENTIFIER);
-                    sys = new SysVarPrimary(scope, str, strUp);
+                    sys = new SysVarPrimary(scope, scopeStr, str, strUp);
                     sys.setCacheEvalRst(cacheEvalRst);
                     return sys;
             }
         }
-        sys = new SysVarPrimary(scope, str, strUp);
+        sys = new SysVarPrimary(scope, scopeStr, str, strUp);
         sys.setCacheEvalRst(cacheEvalRst);
         return sys;
     }
@@ -156,6 +169,7 @@ public abstract class MySQLParser {
      * 
      * @return null if there is no order limit
      */
+    @SuppressWarnings("incomplete-switch")
     protected Limit limit() throws SQLSyntaxErrorException {
         if (lexer.token() != KW_LIMIT) {
             return null;
@@ -166,17 +180,24 @@ public abstract class MySQLParser {
         switch (lexer.nextToken()) {
             case LITERAL_NUM_PURE_DIGIT:
                 num1 = lexer.integerValue();
+                if (this instanceof MySQLDMLUpdateParser || this instanceof MySQLDMLDeleteParser) {
+                    lexer.nextToken();
+                    if (lexer.token() == MySQLToken.PUNC_COMMA) {
+                        throw err("unexpected COMMA");
+                    }
+                    return new Limit(new Integer(0), num1, true);
+                }
                 switch (lexer.nextToken()) {
                     case PUNC_COMMA:
                         switch (lexer.nextToken()) {
                             case LITERAL_NUM_PURE_DIGIT:
                                 Number num2 = lexer.integerValue();
                                 lexer.nextToken();
-                                return new Limit(num1, num2);
+                                return new Limit(num1, num2, false);
                             case QUESTION_MARK:
                                 paramIndex1 = lexer.paramIndex();
                                 lexer.nextToken();
-                                return new Limit(num1, createParam(paramIndex1));
+                                return new Limit(num1, createParam(paramIndex1), false);
                             default:
                                 throw err("expect digit or ? after , for limit");
                         }
@@ -186,7 +207,7 @@ public abstract class MySQLParser {
                                 case LITERAL_NUM_PURE_DIGIT:
                                     Number num2 = lexer.integerValue();
                                     lexer.nextToken();
-                                    return new Limit(num2, num1);
+                                    return new Limit(num2, num1, false);
                                 case QUESTION_MARK:
                                     paramIndex1 = lexer.paramIndex();
                                     lexer.nextToken();
@@ -195,12 +216,17 @@ public abstract class MySQLParser {
                                     throw err("expect digit or ? after , for limit");
                             }
                         }
-                    default:
-                        break;
                 }
-                return new Limit(new Integer(0), num1);
+                return new Limit(new Integer(0), num1, true);
             case QUESTION_MARK:
                 paramIndex1 = lexer.paramIndex();
+                if (this instanceof MySQLDMLUpdateParser || this instanceof MySQLDMLDeleteParser) {
+                    lexer.nextToken();
+                    if (lexer.token() == MySQLToken.PUNC_COMMA) {
+                        throw err("unexpected COMMA");
+                    }
+                    return new Limit(new Integer(0), createParam(paramIndex1), true);
+                }
                 switch (lexer.nextToken()) {
                     case PUNC_COMMA:
                         switch (lexer.nextToken()) {
@@ -211,7 +237,8 @@ public abstract class MySQLParser {
                             case QUESTION_MARK:
                                 paramIndex2 = lexer.paramIndex();
                                 lexer.nextToken();
-                                return new Limit(createParam(paramIndex1), createParam(paramIndex2));
+                                return new Limit(createParam(paramIndex1),
+                                        createParam(paramIndex2));
                             default:
                                 throw err("expect digit or ? after , for limit");
                         }
@@ -221,7 +248,7 @@ public abstract class MySQLParser {
                                 case LITERAL_NUM_PURE_DIGIT:
                                     num1 = lexer.integerValue();
                                     lexer.nextToken();
-                                    return new Limit(num1, createParam(paramIndex1));
+                                    return new Limit(num1, createParam(paramIndex1), false);
                                 case QUESTION_MARK:
                                     paramIndex2 = lexer.paramIndex();
                                     lexer.nextToken();
@@ -231,17 +258,15 @@ public abstract class MySQLParser {
                                     throw err("expect digit or ? after , for limit");
                             }
                         }
-                    default:
-                        break;
                 }
-                return new Limit(new Integer(0), createParam(paramIndex1));
+                return new Limit(new Integer(0), createParam(paramIndex1), true);
             default:
                 throw err("expect digit or ? after limit");
         }
     }
 
     /**
-     * @param expectTextUppercase must be upper-case
+     * @param expectTextUppercases must be upper-case
      * @return index (start from 0) of expected text which is first matched. -1 if none is matched.
      */
     protected int equalsIdentifier(String... expectTextUppercases) throws SQLSyntaxErrorException {
@@ -254,6 +279,23 @@ public abstract class MySQLParser {
             }
         }
         return -1;
+    }
+
+    /**
+     * @return index of expected token, start from 0
+     * @throws SQLSyntaxErrorException if no token is matched
+     */
+    protected int matchToken(String... expectTextUppercase) throws SQLSyntaxErrorException {
+        if (expectTextUppercase == null || expectTextUppercase.length <= 0)
+            throw new IllegalArgumentException("at least one expect token");
+        String id = lexer.stringValueUppercase();
+        for (int i = 0; i < expectTextUppercase.length; ++i) {
+            if (id == null ? expectTextUppercase[i] == null : id.equals(expectTextUppercase[i])) {
+                lexer.nextToken();
+                return i;
+            }
+        }
+        throw err("expect " + expectTextUppercase);
     }
 
     /**
@@ -292,7 +334,17 @@ public abstract class MySQLParser {
                 return i;
             }
         }
-        throw err("expect " + expectToken);
+        if (expectToken.length == 1) {
+            throw err("expect " + expectToken[0]);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < expectToken.length; ++i) {
+            sb.append(" ").append(expectToken);
+            if (i + 1 < expectToken.length) {
+                sb.append(" |");
+            }
+        }
+        throw err("expect " + sb.toString());
     }
 
     /**

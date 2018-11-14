@@ -18,10 +18,10 @@ package fm.liu.timo.parser.recognizer.mysql.lexer;
 
 import java.sql.SQLSyntaxErrorException;
 
-import junit.framework.Assert;
-import junit.framework.TestCase;
 import fm.liu.timo.parser.Performance;
 import fm.liu.timo.parser.recognizer.mysql.MySQLToken;
+import junit.framework.Assert;
+import junit.framework.TestCase;
 
 /**
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
@@ -30,7 +30,7 @@ public class MySQLLexerTest extends TestCase {
 
     public static void main(String[] args) throws SQLSyntaxErrorException {
         String sql = Performance.SQL_BENCHMARK_SELECT;
-        char[] chars = sql.toCharArray();
+        //        char[] chars = sql.toCharArray();
         MySQLLexer sut = new MySQLLexer(sql);
         long start = System.currentTimeMillis();
         long end = System.currentTimeMillis();
@@ -55,7 +55,7 @@ public class MySQLLexerTest extends TestCase {
         sut = new MySQLLexer(sql);
         start = System.currentTimeMillis();
         for (int i = 0; i < loop; ++i) {
-            sut = new MySQLLexer(chars);
+            sut = new MySQLLexer(sql.getBytes());
             for (; !sut.eof();) {
                 sut.nextToken();
                 switch (sut.token()) {
@@ -294,9 +294,8 @@ public class MySQLLexerTest extends TestCase {
         sut.nextToken();
         Assert.assertEquals(MySQLToken.EOF, sut.token());
 
-        sut =
-                new MySQLLexer(
-                        "  #@abc\n@\"1a_-@#!''`=\\a\"-- @\r\n@'-_1a/**/\\\"\\''/*@abc*/@`_1@\\''\"`");
+        sut = new MySQLLexer(
+                "  #@abc\n@\"1a_-@#!''`=\\a\"-- @\r\n@'-_1a/**/\\\"\\''/*@abc*/@`_1@\\''\"`");
         Assert.assertEquals(MySQLToken.USR_VAR, sut.token());
         Assert.assertEquals("@\"1a_-@#!''`=\\a\"", sut.stringValue());
         sut.nextToken();
@@ -308,9 +307,8 @@ public class MySQLLexerTest extends TestCase {
         sut.nextToken();
         Assert.assertEquals(MySQLToken.EOF, sut.token());
 
-        sut =
-                new MySQLLexer(
-                        "  /*! */@._a$ @_a.b$c.\r@1_a.$#\n@A.a_/@-- \n@_--@.[]'\"@#abc'@a,@;@~#@abc");
+        sut = new MySQLLexer(
+                "  /*! */@._a$ @_a.b$c.\r@1_a.$#\n@A.a_/@-- \n@_--@.[]'\"@#abc'@a,@;@~#@abc");
         Assert.assertEquals(MySQLToken.USR_VAR, sut.token());
         Assert.assertEquals("@._a$", sut.stringValue());
         sut.nextToken();
@@ -441,9 +439,8 @@ public class MySQLLexerTest extends TestCase {
         sut.nextToken();
         Assert.assertEquals(MySQLToken.EOF, sut.token());
 
-        sut =
-                new MySQLLexer(
-                        "@@.  /*@@abc*/@@`abc''\"\\@@!%*&+_abcQ`//@@_1.  @@$#\n@@$var.-- @@a\t\n@@system_var:@@a`b`?");
+        sut = new MySQLLexer(
+                "@@.  /*@@abc*/@@`abc''\"\\@@!%*&+_abcQ`//@@_1.  @@$#\n@@$var.-- @@a\t\n@@system_var:@@a`b`?");
         Assert.assertEquals(MySQLToken.SYS_VAR, sut.token());
         Assert.assertEquals("", sut.stringValue());
         sut.nextToken();
@@ -839,9 +836,8 @@ public class MySQLLexerTest extends TestCase {
         sut.nextToken();
         Assert.assertEquals(MySQLToken.EOF, sut.token());
 
-        sut =
-                new MySQLLexer(
-                        "  \'abc\\\\\\'\' 'abc\\a\\'\''\"\"'/\"abc\\\"\".\"\"\"abc\"\"\"\"'\''\"n'ab\\'c'");
+        sut = new MySQLLexer(
+                "  \'abc\\\\\\'\' 'abc\\a\\'\''\"\"'/\"abc\\\"\".\"\"\"abc\"\"\"\"'\''\"n'ab\\'c'");
         Assert.assertEquals(MySQLToken.LITERAL_CHARS, sut.token());
         Assert.assertEquals("'abc\\\\\\''", sut.stringValue());
         sut.nextToken();
@@ -889,7 +885,8 @@ public class MySQLLexerTest extends TestCase {
 
         sut = new MySQLLexer("0x0");
         Assert.assertEquals(MySQLToken.LITERAL_HEX, sut.token());
-        Assert.assertEquals("0", new String(sut.getSQL(), sut.getOffsetCache(), sut.getSizeCache()));
+        Assert.assertEquals("0",
+                new String(sut.getSQL(), sut.getOffsetCache(), sut.getSizeCache()));
         sut.nextToken();
         Assert.assertEquals(MySQLToken.EOF, sut.token());
 
@@ -975,7 +972,8 @@ public class MySQLLexerTest extends TestCase {
         Assert.assertEquals(MySQLToken.PUNC_SEMICOLON, sut.token());
         sut.nextToken();
         Assert.assertEquals(MySQLToken.LITERAL_HEX, sut.token());
-        Assert.assertEquals("e", new String(sut.getSQL(), sut.getOffsetCache(), sut.getSizeCache()));
+        Assert.assertEquals("e",
+                new String(sut.getSQL(), sut.getOffsetCache(), sut.getSizeCache()));
         sut.nextToken();
         Assert.assertEquals(MySQLToken.IDENTIFIER, sut.token());
         Assert.assertEquals("a0x1", sut.stringValue());
@@ -1006,9 +1004,8 @@ public class MySQLLexerTest extends TestCase {
     }
 
     public void testNumber() throws SQLSyntaxErrorException {
-        MySQLLexer sut =
-                new MySQLLexer(
-                        " . 12e3/***/.12e3#/**\n.123ee123.1--  \r\t\n.12e/*a*//* !*/.12e_a/12e-- \r\t.12e-1");
+        MySQLLexer sut = new MySQLLexer(
+                " . 12e3/***/.12e3#/**\n.123ee123.1--  \r\t\n.12e/*a*//* !*/.12e_a/12e-- \r\t.12e-1");
         Assert.assertEquals(MySQLToken.PUNC_DOT, sut.token());
         sut.nextToken();
         Assert.assertEquals(MySQLToken.LITERAL_NUM_MIX_DIGIT, sut.token());
@@ -1592,9 +1589,8 @@ public class MySQLLexerTest extends TestCase {
     }
 
     public void testLexer() throws SQLSyntaxErrorException {
-        MySQLLexer sut =
-                new MySQLLexer(
-                        " @a.1_$ .1e+1a%x'a1e'*0b11a \r#\"\"\n@@`123`@@'abc'1.e-1d`/`1.1e1.1e1");
+        MySQLLexer sut = new MySQLLexer(
+                " @a.1_$ .1e+1a%x'a1e'*0b11a \r#\"\"\n@@`123`@@'abc'1.e-1d`/`1.1e1.1e1");
         Assert.assertEquals(MySQLToken.USR_VAR, sut.token());
         Assert.assertEquals("@a.1_$", sut.stringValue());
         sut.nextToken();

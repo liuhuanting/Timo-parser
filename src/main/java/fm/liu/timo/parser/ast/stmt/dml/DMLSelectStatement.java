@@ -51,6 +51,7 @@ public class DMLSelectStatement extends DMLQueryStatement {
     }
 
     public static final class SelectOption {
+        public int version;// /*!40001 SQL_NO_CACHE */ * 指定最低版本号
         public SelectDuplicationStrategy resultDup = SelectDuplicationStrategy.ALL;
         public boolean highPriority = false;
         public boolean straightJoin = false;
@@ -59,6 +60,7 @@ public class DMLSelectStatement extends DMLQueryStatement {
         public QueryCacheStrategy queryCache = QueryCacheStrategy.UNDEF;
         public boolean sqlCalcFoundRows = false;
         public LockMode lockMode = LockMode.UNDEF;
+        public boolean unknownOption = false;
 
         @Override
         public String toString() {
@@ -75,17 +77,41 @@ public class DMLSelectStatement extends DMLQueryStatement {
             sb.append('}');
             return sb.toString();
         }
+
+        public void merge(SelectOption option) {
+            if (version == 0) {
+                version = option.version;
+            }
+            if (resultDup == SelectDuplicationStrategy.ALL) {
+                resultDup = option.resultDup;
+            }
+            highPriority |= option.highPriority;
+            sqlBufferResult |= option.sqlBufferResult;
+            sqlCalcFoundRows |= option.sqlCalcFoundRows;
+            unknownOption |= option.unknownOption;
+            if (resultSize == SmallOrBigResult.UNDEF) {
+                resultSize = option.resultSize;
+            }
+            if (queryCache == QueryCacheStrategy.UNDEF) {
+                queryCache = option.queryCache;
+            }
+            if (lockMode == LockMode.UNDEF) {
+                lockMode = option.lockMode;
+            }
+        }
     }
 
     private final SelectOption option;
     /** string: id | `id` | 'id' */
     private List<Pair<Expression, String>> selectExprList;
-    private final TableReferences tables;
-    private final Expression where;
-    private final GroupBy group;
-    private final Expression having;
-    private final OrderBy order;
-    private final Limit limit;
+    private TableReferences tables;
+    private Expression where;
+    private GroupBy group;
+    private Expression having;
+    private OrderBy order;
+    private Limit outermostLimit;
+    private OrderBy outermostOrderBy;
+    private Limit limit;
 
     /**
      * @throws SQLSyntaxErrorException
@@ -121,7 +147,9 @@ public class DMLSelectStatement extends DMLQueryStatement {
         return selectExprList;
     }
 
-    /** @performance slow */
+    /**
+     * @performance slow
+     */
     public List<Expression> getSelectExprListWithoutAlias() {
         if (selectExprList == null || selectExprList.isEmpty())
             return Collections.emptyList();
@@ -136,6 +164,10 @@ public class DMLSelectStatement extends DMLQueryStatement {
 
     public TableReferences getTables() {
         return tables;
+    }
+
+    public void setTables(TableReferences tables) {
+        this.tables = tables;
     }
 
     public Expression getWhere() {
@@ -154,6 +186,14 @@ public class DMLSelectStatement extends DMLQueryStatement {
         return order;
     }
 
+    public void setOrder(OrderBy order) {
+        this.order = order;
+    }
+
+    public void setGroup(GroupBy group) {
+        this.group = group;
+    }
+
     public Limit getLimit() {
         return limit;
     }
@@ -166,4 +206,33 @@ public class DMLSelectStatement extends DMLQueryStatement {
     public void setSelectExprList(List<Pair<Expression, String>> list) {
         this.selectExprList = list;
     }
+
+    public void setWhere(Expression and) {
+        this.where = and;
+    }
+
+    public void setLimit(Limit limit) {
+        this.limit = limit;
+    }
+
+    public Limit getOutermostLimit() {
+        return outermostLimit;
+    }
+
+    public void setOutermostLimit(Limit outermostLimit) {
+        this.outermostLimit = outermostLimit;
+    }
+
+    public OrderBy getOutermostOrderBy() {
+        return outermostOrderBy;
+    }
+
+    public void setOutermostOrderBy(OrderBy outermostOrderBy) {
+        this.outermostOrderBy = outermostOrderBy;
+    }
+
+    public void setHaving(Expression having) {
+        this.having = having;
+    }
+
 }

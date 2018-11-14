@@ -33,10 +33,10 @@ public class Identifier extends PrimaryExpression implements Cloneable {
         if (name.charAt(0) != '`') {
             return toUppercase ? name.toUpperCase() : name;
         }
-        if (name.charAt(name.length() - 1) != '`') {
-            throw new IllegalArgumentException("id start with a '`' must end with a '`', id: "
-                    + name);
-        }
+        // if (name.charAt(name.length() - 1) != '`') {
+        // throw new IllegalArgumentException(
+        // "id start with a '`' must end with a '`', id: " + name);
+        // }
         StringBuilder sb = new StringBuilder(name.length() - 2);
         final int endIndex = name.length() - 1;
         boolean hold = false;
@@ -59,7 +59,7 @@ public class Identifier extends PrimaryExpression implements Cloneable {
     protected Identifier parent;
     /** e.g. "id1", "`id1`" */
     protected String idText;
-    protected final String idTextUpUnescape;
+    protected String idTextUpUnescape;
 
     public Identifier(Identifier parent, String idText) {
         this(parent, idText, idText.toUpperCase());
@@ -140,6 +140,22 @@ public class Identifier extends PrimaryExpression implements Cloneable {
         return sb.append(idText).toString();
     }
 
+    public String getIdTextWithParentUpUnescape() {
+        StringBuilder sb = new StringBuilder();
+        if (parent != null) {
+            sb.append(parent.getIdTextUpUnescape()).append('.');
+        }
+        return sb.append(this.idTextUpUnescape).toString();
+    }
+
+    public String getIdTextWithParent() {
+        StringBuilder sb = new StringBuilder();
+        if (parent != null) {
+            sb.append(parent.getIdText()).append('.');
+        }
+        return sb.append(this.idText).toString();
+    }
+
     @Override
     public int hashCode() {
         final int constant = 37;
@@ -152,7 +168,7 @@ public class Identifier extends PrimaryExpression implements Cloneable {
         if (idText == null) {
             hash += constant;
         } else {
-            hash = hash * constant + idText.hashCode();
+            hash = hash * constant + idTextUpUnescape.hashCode();
         }
         return hash;
     }
@@ -163,7 +179,8 @@ public class Identifier extends PrimaryExpression implements Cloneable {
             return true;
         if (obj instanceof Identifier) {
             Identifier that = (Identifier) obj;
-            return objEquals(this.parent, that.parent) && objEquals(this.idText, that.idText);
+            return objEquals(this.parent, that.parent)
+                    && objEquals(this.idTextUpUnescape, that.idTextUpUnescape);
         }
         return false;
     }
@@ -183,6 +200,7 @@ public class Identifier extends PrimaryExpression implements Cloneable {
 
     public void setIdText(String string) {
         this.idText = string;
+        this.idTextUpUnescape = this.idText.toUpperCase();
 
     }
 
@@ -196,4 +214,5 @@ public class Identifier extends PrimaryExpression implements Cloneable {
         }
         return clone;
     }
+
 }

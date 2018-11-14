@@ -25,7 +25,7 @@ import fm.liu.timo.parser.visitor.Visitor;
  * @author <a href="mailto:shuo.qius@alibaba-inc.com">QIU Shuo</a>
  */
 public class ExistsPrimary extends PrimaryExpression {
-    private final QueryExpression subquery;
+    private QueryExpression subquery;
 
     public ExistsPrimary(QueryExpression subquery) {
         if (subquery == null)
@@ -40,8 +40,13 @@ public class ExistsPrimary extends PrimaryExpression {
         return subquery;
     }
 
+    public void setSubquery(QueryExpression exp) {
+        this.subquery = exp;
+    }
+
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
 }

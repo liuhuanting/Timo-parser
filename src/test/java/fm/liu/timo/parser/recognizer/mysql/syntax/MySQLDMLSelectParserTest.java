@@ -61,7 +61,7 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
                 "(select id from t1) union all (select id from t2) union all (select id from t3) ordeR By d desC limit 1 offset 5";
         MySQLLexer lexer = new MySQLLexer(sql);
         MySQLDMLSelectParser parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
-        DMLSelectUnionStatement select = (DMLSelectUnionStatement) parser.selectUnion();
+        DMLSelectUnionStatement select = (DMLSelectUnionStatement) parser.selectUnion(false);
         Assert.assertEquals(0, select.getFirstDistinctIndex());
         Assert.assertEquals(3, select.getSelectStmtList().size());
         String output = output2MySQL(select, sql);
@@ -69,11 +69,10 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
                 "(SELECT id FROM t1) UNION ALL (SELECT id FROM t2) UNION ALL (SELECT id FROM t3) ORDER BY d DESC LIMIT 5 , 1",
                 output);
 
-        sql =
-                "(select id from t1) union  select id from t2 order by id union aLl (select id from t3) ordeR By d asC";
+        sql = "(select id from t1) union  (select id from t2 order by id) union aLl (select id from t3) ordeR By d asC";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
-        select = (DMLSelectUnionStatement) parser.selectUnion();
+        select = (DMLSelectUnionStatement) parser.selectUnion(false);
         Assert.assertEquals(1, select.getFirstDistinctIndex());
         Assert.assertEquals(3, select.getSelectStmtList().size());
         output = output2MySQL(select, sql);
@@ -84,7 +83,7 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
         sql = "(select id from t1) union distInct (select id from t2) union  select id from t3";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
-        select = (DMLSelectUnionStatement) parser.selectUnion();
+        select = (DMLSelectUnionStatement) parser.selectUnion(false);
         Assert.assertEquals(2, select.getFirstDistinctIndex());
         Assert.assertEquals(3, select.getSelectStmtList().size());
         output = output2MySQL(select, sql);
@@ -104,8 +103,7 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
                 "SELECT t1.id, t2.* FROM t1, test.t2 WHERE test.t1.id = 1 AND t1.id = test.t2.id",
                 output);
 
-        sql =
-                "select * from  offer  a  straight_join wp_image b use key for join(t1,t2) on a.member_id=b.member_id inner join product_visit c where a.member_id=c.member_id and c.member_id='abc' ";
+        sql = "select * from  offer  a  straight_join wp_image b use key for join(t1,t2) on a.member_id=b.member_id inner join product_visit c where a.member_id=c.member_id and c.member_id='abc' ";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
         select = parser.select();
@@ -133,9 +131,8 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
                 "SELECT DISTINCT HIGH_PRIORITY tb1.id, tb2.id FROM tb1, tb2 WHERE tb1.id2 = tb2.id2",
                 output);
 
-        sql =
-                "SELect distinctrow high_priority sql_small_result tb1.id,tb2.id "
-                        + "from tb1,tb2 where tb1.id2=tb2.id2";
+        sql = "SELect distinctrow high_priority sql_small_result tb1.id,tb2.id "
+                + "from tb1,tb2 where tb1.id2=tb2.id2";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
         select = parser.select();
@@ -154,8 +151,7 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
         Assert.assertEquals("SELECT SQL_CACHE id1, id2 FROM tb1, tb2 WHERE tb1.id1 = tb2.id1",
                 output);
 
-        sql =
-                "SELect  sql_cache id1,max(id2) from tb1 group by id1 having id1>10 order by id3 desc";
+        sql = "SELect  sql_cache id1,max(id2) from tb1 group by id1 having id1>10 order by id3 desc";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
         select = parser.select();
@@ -205,16 +201,17 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
         output = output2MySQL(select, sql);
         Assert.assertEquals("SELECT t1.* FROM tb", output);
 
-        sql =
-                "SELect distinct high_priority straight_join sql_big_result sql_cache tb1.id,tb2.id "
-                        + "from tb1,tb2 where tb1.id2=tb2.id2";
+        sql = "SELect distinct high_priority straight_join sql_big_result sql_cache tb1.id,tb2.id "
+                + "from tb1,tb2 where tb1.id2=tb2.id2";
         lexer = new MySQLLexer(sql);
         parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
         select = parser.select();
         Assert.assertNotNull(select);
         output = output2MySQL(select, sql);
-        Assert.assertEquals("SELECT DISTINCT HIGH_PRIORITY STRAIGHT_JOIN SQL_BIG_RESULT"
-                + " SQL_CACHE tb1.id, tb2.id FROM tb1, tb2 WHERE tb1.id2 = tb2.id2", output);
+        Assert.assertEquals(
+                "SELECT DISTINCT HIGH_PRIORITY STRAIGHT_JOIN SQL_BIG_RESULT"
+                        + " SQL_CACHE tb1.id, tb2.id FROM tb1, tb2 WHERE tb1.id2 = tb2.id2",
+                output);
 
         sql = "SELect distinct id1,id2 from tb1,tb2 where tb1.id1=tb2.id2 for update";
         lexer = new MySQLLexer(sql);
@@ -223,7 +220,8 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
         Assert.assertNotNull(select);
         output = output2MySQL(select, sql);
         Assert.assertEquals(
-                "SELECT DISTINCT id1, id2 FROM tb1, tb2 WHERE tb1.id1 = tb2.id2 FOR UPDATE", output);
+                "SELECT DISTINCT id1, id2 FROM tb1, tb2 WHERE tb1.id1 = tb2.id2 FOR UPDATE",
+                output);
 
         sql = "SELect distinct id1,id2 from tb1,tb2 where tb1.id1=tb2.id2 lock in share mode";
         lexer = new MySQLLexer(sql);
@@ -238,16 +236,19 @@ public class MySQLDMLSelectParserTest extends AbstractSyntaxTest {
     }
 
     public void testSelectChinese() throws SQLSyntaxErrorException {
-        String sql =
-                "SELect t1.id , t2.* from t1, test.t2 where test.t1.id='中''‘文' and t1.id=test.t2.id";
+        String sql = "SELect '中''‘文'";
+        //        String sql =
+        //                "SELect t1.id , t2.* from t1, test.t2 where test.t1.id='中''‘文' and t1.id=test.t2.id";
+        byte[] data = sql.getBytes();
         MySQLLexer lexer = new MySQLLexer(sql);
         MySQLDMLSelectParser parser = new MySQLDMLSelectParser(lexer, new MySQLExprParser(lexer));
         DMLSelectStatement select = parser.select();
         Assert.assertNotNull(select);
         String output = output2MySQL(select, sql);
-        Assert.assertEquals(
-                "SELECT t1.id, t2.* FROM t1, test.t2 WHERE test.t1.id = '中\\'‘文' AND t1.id = test.t2.id",
-                output);
+        Assert.assertEquals("SELECT '中\\'‘文'", output);
+        //        Assert.assertEquals(
+        //                "SELECT t1.id, t2.* FROM t1, test.t2 WHERE test.t1.id = '中\\'‘文' AND t1.id = test.t2.id",
+        //                output);
     }
 
 }

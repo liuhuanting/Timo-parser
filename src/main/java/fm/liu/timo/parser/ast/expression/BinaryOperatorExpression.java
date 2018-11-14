@@ -33,7 +33,8 @@ public abstract class BinaryOperatorExpression extends AbstractExpression {
     /**
      * {@link #leftCombine} is true
      */
-    protected BinaryOperatorExpression(Expression leftOprand, Expression rightOprand, int precedence) {
+    protected BinaryOperatorExpression(Expression leftOprand, Expression rightOprand,
+            int precedence) {
         this.leftOprand = leftOprand;
         this.rightOprand = rightOprand;
         this.precedence = precedence;

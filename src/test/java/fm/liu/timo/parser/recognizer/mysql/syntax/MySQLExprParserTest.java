@@ -97,8 +97,7 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         Assert.assertEquals("123 - 456 * (ii % d)", output);
         Assert.assertEquals(ArithmeticSubtractExpression.class, expr.getClass());
 
-        sql =
-                "(n'\"abc\"' \"abc\" /* */  '\\'s' + 1.123e1/ id3)*(.1e3-a||b)mod x'abc'&&(select 0b1001^b'0000')";
+        sql = "(n'\"abc\"' \"abc\" /* */  '\\'s' + 1.123e1/ id3)*(.1e3-a||b)mod x'abc'&&(select 0b1001^b'0000')";
         lexer = new MySQLLexer(sql);
         parser = new MySQLExprParser(lexer);
         expr = parser.expression();
@@ -113,15 +112,14 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         Assert.assertEquals(ArithmeticMultiplyExpression.class, bex.getClass());
         bex = (BinaryOperatorExpression) ((ArithmeticMultiplyExpression) bex).getLeftOprand();
         Assert.assertEquals(ArithmeticAddExpression.class, bex.getClass());
-        Assert.assertEquals(LiteralString.class, ((ArithmeticAddExpression) bex).getLeftOprand()
-                .getClass());
+        Assert.assertEquals(LiteralString.class,
+                ((ArithmeticAddExpression) bex).getLeftOprand().getClass());
         bex = (BinaryOperatorExpression) ((ArithmeticAddExpression) bex).getRightOprand();
         Assert.assertEquals(ArithmeticDivideExpression.class, bex.getClass());
-        Assert.assertEquals(DMLSelectStatement.class, ((LogicalAndExpression) expr).getOperand(1)
-                .getClass());
+        Assert.assertEquals(DMLSelectStatement.class,
+                ((LogicalAndExpression) expr).getOperand(1).getClass());
 
-        sql =
-                "not! ~`select` in (1,current_date,`current_date`)like `all` div a between (c&&d) and (d|e)";
+        sql = "not! ~`select` in (1,current_date,`current_date`)like `all` div a between (c&&d) and (d|e)";
         lexer = new MySQLLexer(sql);
         parser = new MySQLExprParser(lexer);
         expr = parser.expression();
@@ -146,8 +144,7 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
                 (UnaryOperatorExpression) ((NegativeValueExpression) bex.getLeftOprand());
         Assert.assertEquals(BitInvertExpression.class, uex.getOperand().getClass());
 
-        sql =
-                " binary case ~a||b&&c^d xor e when 2>any(select a ) then 3 else 4 end is not null =a";
+        sql = " binary case ~a||b&&c^d xor e when 2>any(select a ) then 3 else 4 end is not null =a";
         lexer = new MySQLLexer(sql);
         parser = new MySQLExprParser(lexer);
         expr = parser.expression();
@@ -188,8 +185,8 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         Assert.assertEquals(ComparisionNotEqualsExpression.class, pex.getOperand(0).getClass());
         Assert.assertEquals(SoundsLikeExpression.class, pex.getOperand(1).getClass());
         bex = (BinaryOperatorExpression) pex.getOperand(0);
-        Assert.assertEquals(ComparisionNullSafeEqualsExpression.class, bex.getLeftOprand()
-                .getClass());
+        Assert.assertEquals(ComparisionNullSafeEqualsExpression.class,
+                bex.getLeftOprand().getClass());
         Assert.assertEquals(SysVarPrimary.class, bex.getRightOprand().getClass());
         bex = (BinaryOperatorExpression) bex.getLeftOprand();
         Assert.assertEquals(NegativeValueExpression.class, bex.getLeftOprand().getClass());
@@ -475,8 +472,7 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         output = output2MySQL(expr, sql);
         Assert.assertEquals("(SELECT a) IS NOT NULL", output);
 
-        sql =
-                "a is not null is not false is not true is not UNKNOWn is null is false is true is unknown";
+        sql = "a is not null is not false is not true is not UNKNOWn is null is false is true is unknown";
         parser = new MySQLExprParser(new MySQLLexer(sql));
         expr = parser.expression();
         output = output2MySQL(expr, sql);
@@ -718,8 +714,7 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         Assert.assertEquals("1 >= ANY (SELECT id FROM t1 LIMIT 0 , 1)", output);
         Assert.assertEquals(ComparisionGreaterThanOrEqualsExpression.class, expr.getClass());
 
-        sql =
-                "1 >= any (select id from t1 limit 1) > aLl(select tb1.id from tb1 t1,tb2 as t2 where t1.id=t2.id limit 1)";
+        sql = "1 >= any (select id from t1 limit 1) > aLl(select tb1.id from tb1 t1,tb2 as t2 where t1.id=t2.id limit 1)";
         parser = new MySQLExprParser(new MySQLLexer(sql));
         expr = parser.expression();
         output = output2MySQL(expr, sql);
@@ -1227,8 +1222,7 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         output = output2MySQL(expr, sql);
         Assert.assertEquals("COUNT(*)", output);
 
-        sql =
-                "GROUP_CONCAT(DISTINCT expr1,expr2,expr3 ORDER BY col_name1 DESC,col_name2 SEPARATOR ' ')";
+        sql = "GROUP_CONCAT(DISTINCT expr1,expr2,expr3 ORDER BY col_name1 DESC,col_name2 SEPARATOR ' ')";
         parser = new MySQLExprParser(new MySQLLexer(sql));
         expr = parser.expression();
         output = output2MySQL(expr, sql);
@@ -1381,7 +1375,8 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         parser = new MySQLExprParser(new MySQLLexer(sql));
         expr = parser.expression();
         output = output2MySQL(expr, sql);
-        Assert.assertEquals("DATE_ADD('2100-12-31 23:59:59', INTERVAL '1:1' MINUTE_SECOND)", output);
+        Assert.assertEquals("DATE_ADD('2100-12-31 23:59:59', INTERVAL '1:1' MINUTE_SECOND)",
+                output);
 
         sql = "DATE_SUB('2005-01-01 00:00:00',INTERVAL '1 1:1:1' DAY_SECOND)";
         parser = new MySQLExprParser(new MySQLLexer(sql));
@@ -1442,7 +1437,8 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         parser = new MySQLExprParser(new MySQLLexer(sql));
         expr = parser.expression();
         output = output2MySQL(expr, sql);
-        Assert.assertEquals("DATE_ADD('2100-12-31 23:59:59', INTERVAL '1:1:1' HOUR_SECOND)", output);
+        Assert.assertEquals("DATE_ADD('2100-12-31 23:59:59', INTERVAL '1:1:1' HOUR_SECOND)",
+                output);
 
         sql = "DATE_ADD('1992-12-31 23:59:59.000002',INTERVAL '1 1:1:1.999999' day_MICROSECOND)";
         parser = new MySQLExprParser(new MySQLLexer(sql));
@@ -1495,8 +1491,10 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         MySQLExprParser parser = new MySQLExprParser(new MySQLLexer(sql));
         Expression expr = parser.expression();
         String output = output2MySQL(expr, sql);
-        Assert.assertEquals("MATCH (title, body) AGAINST ('database' WITH QUERY EXPANSION)", output);
-        Assert.assertEquals("MATCH (title, body) AGAINST ('database' WITH QUERY EXPANSION)", output);
+        Assert.assertEquals("MATCH (title, body) AGAINST ('database' WITH QUERY EXPANSION)",
+                output);
+        Assert.assertEquals("MATCH (title, body) AGAINST ('database' WITH QUERY EXPANSION)",
+                output);
 
         sql = "MATCH (title,body) AGAINST ( (abc in (d)) IN boolean MODE)";
         parser = new MySQLExprParser(new MySQLLexer(sql));
@@ -1564,8 +1562,7 @@ public class MySQLExprParserTest extends AbstractSyntaxTest {
         Assert.assertEquals("MATCH (title, body) AGAINST ('database' IN NATURAL LANGUAGE MODE)",
                 output);
 
-        sql =
-                "MATCH (title,body) AGAINST ('database' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION)";
+        sql = "MATCH (title,body) AGAINST ('database' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION)";
         parser = new MySQLExprParser(new MySQLLexer(sql));
         expr = parser.expression();
         output = output2MySQL(expr, sql);

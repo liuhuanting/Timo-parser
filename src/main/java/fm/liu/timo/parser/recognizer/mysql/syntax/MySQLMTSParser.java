@@ -16,16 +16,21 @@
  */
 package fm.liu.timo.parser.recognizer.mysql.syntax;
 
-import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.*;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.EOF;
+import static fm.liu.timo.parser.recognizer.mysql.MySQLToken.KW_RELEASE;
 
 import java.sql.SQLSyntaxErrorException;
 import java.util.HashMap;
 import java.util.Map;
 
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
+import fm.liu.timo.parser.ast.stmt.mts.MTSCommitStatement;
+import fm.liu.timo.parser.ast.stmt.mts.MTSCommitStatement.CompleteType;
 import fm.liu.timo.parser.ast.stmt.mts.MTSReleaseStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSRollbackStatement;
 import fm.liu.timo.parser.ast.stmt.mts.MTSSavepointStatement;
+import fm.liu.timo.parser.ast.stmt.mts.MTSStartTransactionStatement;
+import fm.liu.timo.parser.ast.stmt.mts.MTSStartTransactionStatement.TransactionCharacteristic;
 import fm.liu.timo.parser.recognizer.mysql.lexer.MySQLLexer;
 
 /**
@@ -33,17 +38,25 @@ import fm.liu.timo.parser.recognizer.mysql.lexer.MySQLLexer;
  */
 public class MySQLMTSParser extends MySQLParser {
     private static enum SpecialIdentifier {
-        CHAIN, NO, RELEASE, SAVEPOINT, WORK
+        CHAIN, NO, RELEASE, SAVEPOINT, WORK, TRANSACTION, WITH, CONSISTENT, SNAPSHOT, READ, WRITE, ONLY
     }
 
     private static final Map<String, SpecialIdentifier> specialIdentifiers =
             new HashMap<String, SpecialIdentifier>();
+
     static {
         specialIdentifiers.put("SAVEPOINT", SpecialIdentifier.SAVEPOINT);
         specialIdentifiers.put("WORK", SpecialIdentifier.WORK);
         specialIdentifiers.put("CHAIN", SpecialIdentifier.CHAIN);
         specialIdentifiers.put("RELEASE", SpecialIdentifier.RELEASE);
         specialIdentifiers.put("NO", SpecialIdentifier.NO);
+        specialIdentifiers.put("TRANSACTION", SpecialIdentifier.TRANSACTION);
+        specialIdentifiers.put("WITH", SpecialIdentifier.WITH);
+        specialIdentifiers.put("CONSISTENT", SpecialIdentifier.CONSISTENT);
+        specialIdentifiers.put("SNAPSHOT", SpecialIdentifier.SNAPSHOT);
+        specialIdentifiers.put("READ", SpecialIdentifier.READ);
+        specialIdentifiers.put("WRITE", SpecialIdentifier.WRITE);
+        specialIdentifiers.put("ONLY", SpecialIdentifier.ONLY);
     }
 
     public MySQLMTSParser(MySQLLexer lexer) {
@@ -58,7 +71,6 @@ public class MySQLMTSParser extends MySQLParser {
         // follow:
         lexer.nextToken();
         Identifier id = identifier();
-        match(EOF);
         return new MTSSavepointStatement(id);
     }
 
@@ -69,7 +81,6 @@ public class MySQLMTSParser extends MySQLParser {
         match(KW_RELEASE);
         matchIdentifier("SAVEPOINT");
         Identifier id = identifier();
-        match(EOF);
         return new MTSReleaseStatement(id);
     }
 
@@ -99,35 +110,159 @@ public class MySQLMTSParser extends MySQLParser {
                     lexer.nextToken();
                 }
                 Identifier savepoint = identifier();
-                match(EOF);
                 return new MTSRollbackStatement(savepoint);
             case KW_AND:
                 lexer.nextToken();
                 siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+                MTSRollbackStatement.CompleteType type = MTSRollbackStatement.CompleteType.CHAIN;
                 if (siTemp == SpecialIdentifier.NO) {
                     lexer.nextToken();
-                    matchIdentifier("CHAIN");
-                    match(EOF);
-                    return new MTSRollbackStatement(MTSRollbackStatement.CompleteType.NO_CHAIN);
+                    type = MTSRollbackStatement.CompleteType.NO_CHAIN;
                 }
                 matchIdentifier("CHAIN");
-                match(EOF);
-                return new MTSRollbackStatement(MTSRollbackStatement.CompleteType.CHAIN);
+                switch (lexer.token()) {
+                    case EOF:
+                        return new MTSRollbackStatement(type);
+                    case IDENTIFIER:
+                        if ("NO".equals(lexer.stringValueUppercase())) {
+                            lexer.nextToken();
+                            match(KW_RELEASE);
+                            match(EOF);
+                            return new MTSRollbackStatement(type);
+                        }
+                    case KW_RELEASE:
+                        if (type == MTSRollbackStatement.CompleteType.NO_CHAIN) {
+                            lexer.nextToken();
+                            match(EOF);
+                            return new MTSRollbackStatement(
+                                    MTSRollbackStatement.CompleteType.RELEASE);
+                        }
+                        break;
+                    default:
+                }
+                throw err("unrecognized complete type: " + lexer.token());
             case KW_RELEASE:
                 lexer.nextToken();
                 match(EOF);
                 return new MTSRollbackStatement(MTSRollbackStatement.CompleteType.RELEASE);
-            case IDENTIFIER:
-                siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
-                if (siTemp == SpecialIdentifier.NO) {
+            case IDENTIFIER: {
+                if ("NO".equals(lexer.stringValueUppercase())) {
                     lexer.nextToken();
                     match(KW_RELEASE);
                     match(EOF);
                     return new MTSRollbackStatement(MTSRollbackStatement.CompleteType.NO_RELEASE);
                 }
+            }
             default:
                 throw err("unrecognized complete type: " + lexer.token());
         }
+    }
+
+    /**
+     * COMMIT [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
+     * 
+     * @return
+     * @throws SQLSyntaxErrorException
+     */
+    public MTSCommitStatement commit() throws SQLSyntaxErrorException {
+        lexer.nextToken();
+        SpecialIdentifier siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+        if (siTemp == SpecialIdentifier.WORK) {
+            lexer.nextToken();
+        }
+        switch (lexer.token()) {
+            case EOF:
+                return new MTSCommitStatement(MTSCommitStatement.CompleteType.UN_DEF);
+            case KW_AND:
+                lexer.nextToken();
+                siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+                CompleteType type = CompleteType.CHAIN;
+                if (siTemp == SpecialIdentifier.NO) {
+                    lexer.nextToken();
+                    type = CompleteType.NO_CHAIN;
+                }
+                matchIdentifier("CHAIN");
+                switch (lexer.token()) {
+                    case EOF:
+                        return new MTSCommitStatement(type);
+                    case IDENTIFIER:
+                        if ("NO".equals(lexer.stringValueUppercase())) {
+                            lexer.nextToken();
+                            match(KW_RELEASE);
+                            match(EOF);
+                            return new MTSCommitStatement(type);
+                        }
+                        break;
+                    case KW_RELEASE:
+                        if (type == CompleteType.NO_CHAIN) {
+                            lexer.nextToken();
+                            match(EOF);
+                            return new MTSCommitStatement(CompleteType.RELEASE);
+                        }
+                    default:
+                }
+                throw err("unrecognized complete type: " + lexer.token());
+            case KW_RELEASE:
+                lexer.nextToken();
+                match(EOF);
+                return new MTSCommitStatement(MTSCommitStatement.CompleteType.RELEASE);
+            case IDENTIFIER: {
+                if ("NO".equals(lexer.stringValueUppercase())) {
+                    lexer.nextToken();
+                    match(KW_RELEASE);
+                    match(EOF);
+                    return new MTSCommitStatement(MTSCommitStatement.CompleteType.NO_RELEASE);
+                }
+            }
+            default:
+                throw err("unrecognized complete type: " + lexer.token());
+        }
+    }
+
+    public MTSStartTransactionStatement start() throws SQLSyntaxErrorException {
+        lexer.nextToken();
+        SpecialIdentifier siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+        if (siTemp == SpecialIdentifier.TRANSACTION) {
+            lexer.nextToken();
+            if (lexer.token() == EOF) {
+                return new MTSStartTransactionStatement(null);
+            }
+            siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+            switch (siTemp) {
+                case WITH:
+                    lexer.nextToken();
+                    siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+                    if (siTemp == SpecialIdentifier.CONSISTENT) {
+                        lexer.nextToken();
+                        siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+                        if (siTemp == SpecialIdentifier.SNAPSHOT) {
+                            lexer.nextToken();
+                            match(EOF);
+                            return new MTSStartTransactionStatement(
+                                    TransactionCharacteristic.WITH_CONSISTENT_SNAPSHOT);
+                        }
+                    }
+                    break;
+                case READ:
+                    lexer.nextToken();
+                    siTemp = specialIdentifiers.get(lexer.stringValueUppercase());
+                    if (siTemp == SpecialIdentifier.WRITE) {
+                        lexer.nextToken();
+                        match(EOF);
+                        return new MTSStartTransactionStatement(
+                                TransactionCharacteristic.READ_WRITE);
+                    } else if (siTemp == SpecialIdentifier.ONLY) {
+                        lexer.nextToken();
+                        match(EOF);
+                        return new MTSStartTransactionStatement(
+                                TransactionCharacteristic.READ_ONLY);
+                    }
+                    break;
+                default:
+                    throw err("unrecognized transaction characteristic: " + lexer.token());
+            }
+        }
+        throw err("unrecognized transaction characteristic: ");
     }
 
 }

@@ -22,8 +22,10 @@ import java.util.List;
 import fm.liu.timo.parser.ast.ASTNode;
 import fm.liu.timo.parser.ast.expression.Expression;
 import fm.liu.timo.parser.ast.expression.primary.Identifier;
+import fm.liu.timo.parser.ast.fragment.OrderBy;
 import fm.liu.timo.parser.ast.fragment.ddl.ColumnDefinition;
 import fm.liu.timo.parser.ast.fragment.ddl.TableOptions;
+import fm.liu.timo.parser.ast.fragment.ddl.index.IndexColumnName;
 import fm.liu.timo.parser.ast.fragment.ddl.index.IndexDefinition;
 import fm.liu.timo.parser.util.Pair;
 import fm.liu.timo.parser.visitor.Visitor;
@@ -60,7 +62,6 @@ public class DDLAlterTableStatement implements DDLStatement {
         /**
          * @param columnName
          * @param columnDefine
-         * @param afterColumn null means fisrt
          */
         public AddColumn(Identifier columnName, ColumnDefinition columnDefine) {
             this.columnName = columnName;
@@ -122,7 +123,7 @@ public class DDLAlterTableStatement implements DDLStatement {
 
         /**
          * @param indexName
-         * @param indexType
+         * @param indexDef
          */
         public AddIndex(Identifier indexName, IndexDefinition indexDef) {
             this.indexName = indexName;
@@ -146,10 +147,21 @@ public class DDLAlterTableStatement implements DDLStatement {
     // | ADD [CONSTRAINT [symbol]] PRIMARY KEY [index_type] (index_col_name,...)
     // [index_option] ...
     public static class AddPrimaryKey implements AlterSpecification {
+        private final Identifier symbol;
         private final IndexDefinition indexDef;
 
-        public AddPrimaryKey(IndexDefinition indexDef) {
+        public AddPrimaryKey(Identifier symbol, IndexDefinition indexDef) {
+            this.symbol = symbol;
             this.indexDef = indexDef;
+        }
+
+        public AddPrimaryKey(Pair<Identifier, IndexDefinition> pair) {
+            symbol = pair.getKey();
+            indexDef = pair.getValue();
+        }
+
+        public Identifier getIndexName() {
+            return symbol;
         }
 
         public IndexDefinition getIndexDef() {
@@ -160,6 +172,78 @@ public class DDLAlterTableStatement implements DDLStatement {
         public void accept(Visitor visitor) {
             visitor.visit(this);
         }
+    }
+
+
+    //    | ADD [CONSTRAINT [symbol]] FOREIGN KEY [index_name] (index_col_name,...)
+    //    reference_definition
+    public static class AddForeignKey implements AlterSpecification {
+
+        public enum REFERENCE_OPTION {
+            RESTRICT, CASCADE, SET_NULL, NO_ACTION
+        }
+
+        private final Identifier indexName;
+        private final List<IndexColumnName> columns;
+        private final Identifier referenceTable;
+        private final List<IndexColumnName> referenceColumns;
+        private REFERENCE_OPTION onDelete;
+        private REFERENCE_OPTION onUpdate;
+        private Identifier symbol;
+
+        public AddForeignKey(Identifier indexName, List<IndexColumnName> columns,
+                Identifier referenceTable, List<IndexColumnName> referenceColumns) {
+            this.indexName = indexName;
+            this.columns = columns;
+            this.referenceTable = referenceTable;
+            this.referenceColumns = referenceColumns;
+        }
+
+        public Identifier getIndexName() {
+            return indexName;
+        }
+
+        public List<IndexColumnName> getColumns() {
+            return columns;
+        }
+
+        public Identifier getReferenceTable() {
+            return referenceTable;
+        }
+
+        public List<IndexColumnName> getReferenceColumns() {
+            return referenceColumns;
+        }
+
+        public REFERENCE_OPTION getOnDelete() {
+            return onDelete;
+        }
+
+        public void setOnDelete(REFERENCE_OPTION onDelete) {
+            this.onDelete = onDelete;
+        }
+
+        public REFERENCE_OPTION getOnUpdate() {
+            return onUpdate;
+        }
+
+        public void setOnUpdate(REFERENCE_OPTION onUpdate) {
+            this.onUpdate = onUpdate;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+
+        public Identifier getSymbol() {
+            return symbol;
+        }
+
+        public void setSymbol(Identifier symbol) {
+            this.symbol = symbol;
+        }
+
     }
 
     // | ADD [CONSTRAINT [symbol]] UNIQUE [INDEX|KEY] [index_name] [index_type]
@@ -410,6 +494,14 @@ public class DDLAlterTableStatement implements DDLStatement {
         }
     }
 
+    // | DROP FOREIGN KEY
+    public static class DropForeignKey implements AlterSpecification {
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
     // | DROP {INDEX|KEY} index_name
     public static class DropIndex implements AlterSpecification {
         private final Identifier indexName;
@@ -428,6 +520,223 @@ public class DDLAlterTableStatement implements DDLStatement {
         }
     }
 
+    // @ZC.CUI | ORDER BY col_name [, col_name] ...
+    public static class OrderByColumns implements AlterSpecification {
+        private final List<Identifier> columns;
+
+        public OrderByColumns() {
+            this.columns = new ArrayList<>();
+        }
+
+        public OrderByColumns addColumns(Identifier column) {
+            this.columns.add(column);
+            return this;
+        }
+
+        public List<Identifier> getColumns() {
+            return this.columns;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
+    // EXCHANGE PARTITION partition_name WITH TABLE tbl_name
+    public static class ExchangePartition implements AlterSpecification {
+        private final Identifier partition;
+        private final Identifier dstTable;
+
+        public ExchangePartition(Identifier partition, Identifier dstTable) {
+            this.partition = partition;
+            this.dstTable = dstTable;
+        }
+
+        public Identifier getPartition() {
+            return partition;
+        }
+
+        public Identifier getDstTable() {
+            return dstTable;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
+    // ANALYZE PARTITION {partition_names | ALL}
+    public static class AnalyzePartition implements AlterSpecification {
+        private boolean isALL = false;
+        private final List<Identifier> partitions;
+
+        public AnalyzePartition(boolean isAll, List<Identifier> partitions) {
+            this.isALL = isAll;
+            this.partitions = partitions;
+        }
+
+        public boolean isALL() {
+            return isALL;
+        }
+
+        public void setALL(boolean isALL) {
+            this.isALL = isALL;
+        }
+
+        public List<Identifier> getPartitions() {
+            return partitions;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {}
+    }
+
+    // CHECK PARTITION {partition_names | ALL}
+    public static class CheckPartition implements AlterSpecification {
+        private boolean isALL = false;
+        private final List<Identifier> partitions;
+
+        public CheckPartition(boolean isAll, List<Identifier> partitions) {
+            this.isALL = isAll;
+            this.partitions = partitions;
+        }
+
+        public boolean isALL() {
+            return isALL;
+        }
+
+        public void setALL(boolean isALL) {
+            this.isALL = isALL;
+        }
+
+        public List<Identifier> getPartitions() {
+            return partitions;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {}
+    }
+
+    // OPTIMIZE PARTITION {partition_names | ALL}
+    public static class OptimizePartition implements AlterSpecification {
+        private boolean isALL = false;
+        private final List<Identifier> partitions;
+
+        public OptimizePartition(boolean isAll, List<Identifier> partitions) {
+            this.isALL = isAll;
+            this.partitions = partitions;
+        }
+
+        public boolean isALL() {
+            return isALL;
+        }
+
+        public void setALL(boolean isALL) {
+            this.isALL = isALL;
+        }
+
+        public List<Identifier> getPartitions() {
+            return partitions;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
+    // REPAIR PARTITION {partition_names | ALL}
+    public static class RepairPartition implements AlterSpecification {
+        private boolean isALL = false;
+        private final List<Identifier> partitions;
+
+        public RepairPartition(boolean isAll, List<Identifier> partitions) {
+            this.isALL = isAll;
+            this.partitions = partitions;
+        }
+
+        public boolean isALL() {
+            return isALL;
+        }
+
+        public void setALL(boolean isALL) {
+            this.isALL = isALL;
+        }
+
+        public List<Identifier> getPartitions() {
+            return partitions;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
+    /**
+     * PARTITION BY { [LINEAR] HASH(expr) | [LINEAR] KEY [ALGORITHM={1|2}] (column_list) |
+     * RANGE{(expr) | COLUMNS(column_list)} | LIST{(expr) | COLUMNS(column_list)} } [PARTITIONS num]
+     * [SUBPARTITION BY { [LINEAR] HASH(expr) | [LINEAR] KEY [ALGORITHM={1|2}] (column_list) }
+     * [SUBPARTITIONS num] ] [(partition_definition [, partition_definition] ...)]
+     * 
+     * @author quanchao
+     *
+     */
+    public static class PartitionFunction implements AlterSpecification {
+        public PartitionFunction() {}
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
+    /**
+     * RENAME {INDEX|KEY} old_index_name TO new_index_name
+     */
+    public static class ReNameIndex implements AlterSpecification {
+        private final Identifier renameFromOld;
+        private final Identifier renameToNew;
+
+        public ReNameIndex(Identifier renameFromOld, Identifier renameToNew) {
+            this.renameFromOld = renameFromOld;
+            this.renameToNew = renameToNew;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+
+        public Identifier getRenameFromOld() {
+            return renameFromOld;
+        }
+
+        public Identifier getRenameToNew() {
+            return renameToNew;
+        }
+
+    }
+
+    public static class WithValidation implements AlterSpecification {
+        private boolean isWith;
+
+        public WithValidation(boolean with) {
+            this.isWith = with;
+        }
+
+        public boolean isWith() {
+            return this.isWith;
+        }
+
+        @Override
+        public void accept(Visitor visitor) {
+            visitor.visit(this);
+        }
+    }
+
     // | DISABLE KEYS
     // | ENABLE KEYS
     // | RENAME [TO] new_tbl_name
@@ -435,6 +744,7 @@ public class DDLAlterTableStatement implements DDLStatement {
     // | CONVERT TO CHARACTER SET charset_name [COLLATE collation_name]
     // | DISCARD TABLESPACE
     // | IMPORT TABLESPACE
+    // | FORCE
     // /// | ADD [CONSTRAINT [symbol]] FOREIGN KEY [index_name]
     // (index_col_name,...) reference_definition
     // /// | DROP FOREIGN KEY fk_symbol
@@ -452,6 +762,16 @@ public class DDLAlterTableStatement implements DDLStatement {
 
     // ADD, ALTER, DROP, and CHANGE can be multiple
 
+    /** | ALGORITHM [=] {DEFAULT|INPLACE|COPY} @author ZC.CUI */
+    public enum Algorithm {
+        DEFAULT, INPLACE, COPY
+    }
+
+    /** | LOCK [=] {DEFAULT|NONE|SHARED|EXCLUSIVE} @author ZC.CUI*/
+    public enum Lock {
+        DEFAULT, NONE, SHARED, EXCLUSIVE
+    }
+
     private final boolean ignore;
     private final Identifier table;
     private TableOptions tableOptions;
@@ -460,9 +780,14 @@ public class DDLAlterTableStatement implements DDLStatement {
     private boolean enableKeys;
     private boolean discardTableSpace;
     private boolean importTableSpace;
+    private boolean force;
     private Identifier renameTo;
+    private Algorithm algorithm;
+    private Lock lock;
     /** charsetName -> collate */
     private Pair<Identifier, Identifier> convertCharset;
+
+    private OrderBy orderBy;
 
     public DDLAlterTableStatement(boolean ignore, Identifier table) {
         this.ignore = ignore;
@@ -515,6 +840,22 @@ public class DDLAlterTableStatement implements DDLStatement {
         this.renameTo = renameTo;
     }
 
+    public Algorithm getAlgorithm() {
+        return this.algorithm;
+    }
+
+    public void setAlgorithm(Algorithm algorithm) {
+        this.algorithm = algorithm;
+    }
+
+    public Lock getLock() {
+        return lock;
+    }
+
+    public void setLock(Lock lock) {
+        this.lock = lock;
+    }
+
     public Pair<Identifier, Identifier> getConvertCharset() {
         return convertCharset;
     }
@@ -546,6 +887,22 @@ public class DDLAlterTableStatement implements DDLStatement {
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
+    }
+
+    public boolean isForce() {
+        return force;
+    }
+
+    public void setForce(boolean force) {
+        this.force = force;
+    }
+
+    public OrderBy getOrderBy() {
+        return orderBy;
+    }
+
+    public void setOrderBy(OrderBy orderBy) {
+        this.orderBy = orderBy;
     }
 
 }

@@ -1,5 +1,4 @@
 /*
- * Copyright 1999-2012 Alibaba Group.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -33,7 +32,7 @@ public class MatchExpression extends PrimaryExpression {
     }
 
     private final List<Expression> columns;
-    private final Expression pattern;
+    private Expression pattern;
     private final Modifier modifier;
 
     /**
@@ -67,4 +66,9 @@ public class MatchExpression extends PrimaryExpression {
     public void accept(Visitor visitor) {
         visitor.visit(this);
     }
+
+    public void setPattern(Expression exp) {
+        this.pattern = exp;
+    }
+
 }
